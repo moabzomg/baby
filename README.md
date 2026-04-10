@@ -1,133 +1,71 @@
-# 🌸 Baby Prep — Pregnancy Companion App
+# ⏱ Labor Tracker
 
-A beautiful, mobile-first React app to help you and your partner prepare for your baby's arrival.
+A focused, mobile-first contraction timer with the 5-1-1 rule built in.
 
-## ✨ Features
+## Features
 
-| Feature | Description |
-|---|---|
-| 🏠 **Dashboard** | Countdown to due date, week/trimester display, daily tip |
-| 🌱 **Weekly Tracker** | Week-by-week baby size, milestones & tips for all 40 weeks |
-| 👶 **Kick Counter** | Track baby movements with goal progress and session history |
-| ⏱️ **Labor Counter** | Time contractions with the 5-1-1 rule alert system |
-| ✅ **Checklist** | Full pregnancy task list (all 3 trimesters + partner tasks) |
-| 🎒 **Hospital Bag** | Packing checklist for mum, baby, and partner |
-
-All data is stored in **localStorage** — no account needed, works offline.
+- **Start / Stop** — `onPointerUp` handler fires reliably on both touch and mouse, even during rapid taps
+- **rAF-based timer** — uses `requestAnimationFrame` instead of `setInterval` so the UI stays smooth and the Stop button is never blocked
+- **Undo last** — remove the most recent entry instantly
+- **Smart status banner** — detects the 5-1-1 pattern and tells you when to call your midwife
+- **Stats** — live average duration and frequency (last 6 contractions)
+- **Full history** — time, duration, gap between contractions, frequency badge, individual delete
+- **Persists** — data saved to `localStorage`, survives page refresh
+- **5-1-1 guide** — always visible at the bottom
 
 ---
 
-## 🚀 Quick Start (Local Development)
-
-### Prerequisites
-- Node.js 16+ installed ([download](https://nodejs.org))
-- npm (comes with Node.js)
-
-### Steps
+## Run locally
 
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Start the development server
 npm start
-
-# 3. Open in browser
 # → http://localhost:3000
 ```
 
 ---
 
-## 📦 Push to GitHub
+## Push to GitHub
 
 ```bash
-# 1. Initialise a git repo (if not done yet)
 git init
-
-# 2. Add all files
 git add .
+git commit -m "⏱ Labor tracker"
 
-# 3. Commit
-git commit -m "🌸 Initial commit – Baby Prep app"
-
-# 4. Create a new repo on github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/baby-prep.git
+# Create a new repo at github.com, then:
+git remote add origin https://github.com/YOUR_USERNAME/labor-tracker.git
 git branch -M main
 git push -u origin main
 ```
 
 ---
 
-## ▲ Deploy to Vercel (linked to GitHub)
+## Deploy on Vercel
 
-### Option A – Via Vercel Dashboard (Recommended)
+1. Go to [vercel.com](https://vercel.com) → **Add New Project**
+2. Import your `labor-tracker` GitHub repo
+3. Vercel auto-detects Create React App — click **Deploy**
+4. Done ✓ — every push to `main` redeploys automatically
 
-1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
-2. Click **"Add New Project"**
-3. Import your `baby-prep` GitHub repository
-4. Vercel auto-detects Create React App — no config needed
-5. Click **Deploy** 🎉
-6. Your app is live at `https://baby-prep-xxx.vercel.app`
-
-> Every time you push to `main`, Vercel automatically redeploys!
-
-### Option B – Via Vercel CLI
-
+Or via CLI:
 ```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy (follow prompts)
-vercel
-
-# Deploy to production
+npm i -g vercel
 vercel --prod
 ```
 
 ---
 
-## 📁 Project Structure
+## Why the Stop button sometimes fails (and how this is fixed)
 
-```
-baby-prep/
-├── public/
-│   └── index.html          # HTML shell with Google Fonts
-├── src/
-│   ├── App.js              # Root component + navigation
-│   ├── App.css             # Global layout + shared styles
-│   ├── index.js            # React entry point
-│   ├── index.css           # CSS variables + animations
-│   └── pages/
-│       ├── Dashboard.js    # Home screen with countdown
-│       ├── Dashboard.css
-│       ├── WeeklyTracker.js  # Week-by-week pregnancy info
-│       ├── WeeklyTracker.css
-│       ├── KickCounter.js  # Baby movement counter
-│       ├── KickCounter.css
-│       ├── LaborCounter.js # Contraction timer + 5-1-1
-│       ├── LaborCounter.css
-│       ├── Checklist.js    # Task checklist
-│       ├── Checklist.css
-│       ├── HospitalBag.js  # Packing list
-│       └── HospitalBag.css
-├── .gitignore
-├── vercel.json             # Vercel config
-├── package.json
-└── README.md
-```
+The original version wrapped the timer in a circular element with a CSS
+`pulse-ring` div sitting on top of the button in the DOM. On some
+mobile browsers the animated overlay intercepted touch events before
+they reached the button.
 
----
+**This version fixes it three ways:**
 
-## 🎨 Design
-
-- **Fonts**: Playfair Display (headings) + DM Sans (body)
-- **Palette**: Blush pink, sage green, soft cream
-- **Mobile-first**: Max width 480px, bottom navigation
-- **Animations**: Smooth fade-ins, pulse rings, micro-interactions
-
----
-
-## 💕 Made with love
-
-Built as a pregnancy companion for partners to prepare together.  
-*Congratulations on your growing family!* 🌸
+1. **`onPointerUp` instead of `onClick`** — fires before scroll-momentum
+   cancellation and isn't blocked by touch-event coalescing.
+2. **No overlay elements** near the button — nothing can intercept the tap.
+3. **`activeStartRef`** — a ref mirrors `activeStart` state so the stop
+   handler always sees the current timestamp without being stale-closed over.
