@@ -1,0 +1,65 @@
+:root {
+  --blush: #f9a8c9;
+  --blush-deep: #f472b6;
+  --sage: #86efac;
+  --sage-deep: #4ade80;
+  --cream: #fdf6f0;
+  --warm: #fde8d8;
+  --sky: #bae6fd;
+  --lavender: #ddd6fe;
+  --text-dark: #1c1917;
+  --text-mid: #57534e;
+  --text-light: #a8a29e;
+  --white: #ffffff;
+  --shadow-soft: 0 4px 24px rgba(249, 168, 201, 0.18);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.07);
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+}
+
+input, textarea, select {
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--warm); }
+::-webkit-scrollbar-thumb { background: var(--blush); border-radius: 3px; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes beat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.12); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.08); }
+}
+
+.fade-in { animation: fadeIn 0.4s ease forwards; }
