@@ -215,6 +215,114 @@ function LaborTracker() {
 }
 
 /* ══════════════════════════════════════════════════ */
+/*  FEEDING GUIDELINES by age (weeks)                 */
+/* ══════════════════════════════════════════════════ */
+const AGE_GUIDES = [
+  {
+    maxWeeks: 1,
+    label: 'Newborn (0–1 week)',
+    freqHours: '1.5–3',
+    freqPerDay: '8–12',
+    bottleMl: '30–60',
+    breastMin: '8–12 min per side',
+    sleepWake: 3,
+    notes: 'Colostrum first — tiny amounts are normal. Wake to feed if sleeping >3 hours.',
+  },
+  {
+    maxWeeks: 4,
+    label: '1–4 weeks',
+    freqHours: '2–3',
+    freqPerDay: '8–12',
+    bottleMl: '60–90',
+    breastMin: '10–20 min per side',
+    sleepWake: 4,
+    notes: 'Milk supply establishing. Feed on demand. Watch for hunger cues.',
+  },
+  {
+    maxWeeks: 8,
+    label: '1–2 months',
+    freqHours: '2–4',
+    freqPerDay: '6–8',
+    bottleMl: '90–120',
+    breastMin: '10–20 min per side',
+    sleepWake: 4,
+    notes: 'Growth spurts common at 3 and 6 weeks — more feeding is normal.',
+  },
+  {
+    maxWeeks: 16,
+    label: '2–4 months',
+    freqHours: '3–4',
+    freqPerDay: '5–6',
+    bottleMl: '120–150',
+    breastMin: '10–15 min per side',
+    sleepWake: 5,
+    notes: 'Baby becomes more efficient — feeds may be shorter. Longer stretches at night possible.',
+  },
+  {
+    maxWeeks: 26,
+    label: '4–6 months',
+    freqHours: '3–5',
+    freqPerDay: '4–6',
+    bottleMl: '150–180',
+    breastMin: '10–15 min per side',
+    sleepWake: 6,
+    notes: 'May show interest in food. Solids not recommended before 6 months.',
+  },
+  {
+    maxWeeks: 39,
+    label: '6–9 months',
+    freqHours: '4–5',
+    freqPerDay: '3–5',
+    bottleMl: '180–230',
+    breastMin: '5–10 min per side',
+    sleepWake: null,
+    notes: 'Introducing solids — milk remains primary nutrition. Offer milk before solids.',
+  },
+  {
+    maxWeeks: 52,
+    label: '9–12 months',
+    freqHours: '4–6',
+    freqPerDay: '3–4',
+    bottleMl: '180–230',
+    breastMin: '5–10 min per side',
+    sleepWake: null,
+    notes: 'Three meals a day with milk feeds. Transitioning toward family foods.',
+  },
+  {
+    maxWeeks: Infinity,
+    label: '12+ months',
+    freqHours: 'on demand',
+    freqPerDay: '2–3',
+    bottleMl: '120–180',
+    breastMin: 'as desired',
+    sleepWake: null,
+    notes: 'Cow\'s milk can be introduced. Breastfeeding can continue as long as desired.',
+  },
+];
+
+function getGuide(ageWeeks) {
+  return AGE_GUIDES.find(g => ageWeeks <= g.maxWeeks) || AGE_GUIDES[AGE_GUIDES.length - 1];
+}
+
+function getBabyAgeWeeks(birthdayStr) {
+  if (!birthdayStr) return null;
+  const diff = Date.now() - new Date(birthdayStr).getTime();
+  if (diff < 0) return null;
+  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+}
+
+function fmtAgeWeeks(w) {
+  if (w === null) return '';
+  if (w < 4)  return `${w} week${w !== 1 ? 's' : ''} old`;
+  const months = Math.floor(w / 4.33);
+  const remWeeks = Math.round(w - months * 4.33);
+  if (months < 12) return remWeeks > 0 ? `${months}m ${remWeeks}w old` : `${months} month${months !== 1 ? 's' : ''} old`;
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  return remMonths > 0 ? `${years}y ${remMonths}m old` : `${years} year${years !== 1 ? 's' : ''} old`;
+}
+
+/* ══════════════════════════════════════════════════ */
 /*  MILK LOG                                          */
 /* ══════════════════════════════════════════════════ */
 const FEED_TYPES = [
@@ -226,13 +334,15 @@ const FEED_TYPES = [
 ];
 
 function MilkLog() {
-  const [feeds, setFeeds]           = useState(() => load('lt_feeds', []));
-  const [feedType, setFeedType]     = useState('breast_left');
-  const [amount, setAmount]         = useState('');
-  const [duration, setDuration]     = useState('');
-  const [note, setNote]             = useState('');
-  const [activeFeed, setActiveFeed] = useState(null);
+  const [feeds, setFeeds]             = useState(() => load('lt_feeds', []));
+  const [feedType, setFeedType]       = useState('breast_left');
+  const [amount, setAmount]           = useState('');
+  const [duration, setDuration]       = useState('');
+  const [note, setNote]               = useState('');
+  const [activeFeed, setActiveFeed]   = useState(null);
   const [liveElapsed, setLiveElapsed] = useState(0);
+  const [birthday, setBirthday]       = useState(() => load('lt_birthday', ''));
+  const [showAgeEdit, setShowAgeEdit] = useState(false);
   const timerRef = useRef(null);
   const activeRef = useRef(null);
   activeRef.current = activeFeed;
@@ -240,6 +350,10 @@ function MilkLog() {
   useEffect(() => {
     localStorage.setItem('lt_feeds', JSON.stringify(feeds));
   }, [feeds]);
+
+  useEffect(() => {
+    localStorage.setItem('lt_birthday', JSON.stringify(birthday));
+  }, [birthday]);
 
   useEffect(() => {
     if (activeFeed) {
@@ -255,9 +369,7 @@ function MilkLog() {
 
   const startFeed = () => {
     setActiveFeed({ startTime: Date.now(), type: feedType });
-    setAmount('');
-    setDuration('');
-    setNote('');
+    setAmount(''); setDuration(''); setNote('');
   };
 
   const stopFeed = useCallback(() => {
@@ -265,50 +377,40 @@ function MilkLog() {
     if (!af) return;
     clearInterval(timerRef.current);
     const durSec = Math.floor((Date.now() - af.startTime) / 1000);
-    const entry = {
-      id: Date.now(),
-      timestamp: af.startTime,
-      type: af.type,
-      durationSec: durSec,
-      amountMl: null,
-      note: '',
-    };
-    setFeeds(prev => [entry, ...prev]);
+    setFeeds(prev => [{ id: Date.now(), timestamp: af.startTime, type: af.type, durationSec: durSec, amountMl: null, note: '' }, ...prev]);
     setActiveFeed(null);
   }, []);
 
   const logManual = () => {
     if (!amount && !duration) return;
     const entry = {
-      id: Date.now(),
-      timestamp: Date.now(),
-      type: feedType,
+      id: Date.now(), timestamp: Date.now(), type: feedType,
       durationSec: duration ? parseInt(duration, 10) * 60 : null,
       amountMl: amount ? parseFloat(amount) : null,
       note: note.trim(),
     };
     setFeeds(prev => [entry, ...prev]);
-    setAmount('');
-    setDuration('');
-    setNote('');
+    setAmount(''); setDuration(''); setNote('');
   };
 
   const deleteOne = (id) => setFeeds(prev => prev.filter(f => f.id !== id));
-  const clearAll  = () => {
-    if (window.confirm('Clear all feed records?')) setFeeds([]);
-  };
+  const clearAll  = () => { if (window.confirm('Clear all feed records?')) setFeeds([]); };
 
-  const todayFeeds = feeds.filter(f => isSameDay(f.timestamp, Date.now()));
-  const todayCount = todayFeeds.length;
-  const todayMl    = todayFeeds.reduce((s, f) => s + (f.amountMl || 0), 0);
-  const todayMin   = Math.round(todayFeeds.reduce((s, f) => s + (f.durationSec || 0), 0) / 60);
+  // Age-aware guide
+  const ageWeeks = getBabyAgeWeeks(birthday);
+  const guide    = ageWeeks !== null ? getGuide(ageWeeks) : null;
 
-  const lastFeed = feeds[0];
-  const gapSinceLastMin = lastFeed
-    ? Math.floor((Date.now() - lastFeed.timestamp) / 60000)
-    : null;
+  // Gap alert thresholds from guide
+  const warnMins  = guide ? parseFloat(guide.freqHours) * 60       : 120;
+  const alertMins = guide ? parseFloat(guide.freqHours) * 60 + 60  : 180;
 
-  const typeInfo = (id) => FEED_TYPES.find(t => t.id === id) || FEED_TYPES[0];
+  const todayFeeds      = feeds.filter(f => isSameDay(f.timestamp, Date.now()));
+  const todayCount      = todayFeeds.length;
+  const todayMl         = todayFeeds.reduce((s, f) => s + (f.amountMl || 0), 0);
+  const todayMin        = Math.round(todayFeeds.reduce((s, f) => s + (f.durationSec || 0), 0) / 60);
+  const lastFeed        = feeds[0];
+  const gapSinceLastMin = lastFeed ? Math.floor((Date.now() - lastFeed.timestamp) / 60000) : null;
+  const typeInfo        = (id) => FEED_TYPES.find(t => t.id === id) || FEED_TYPES[0];
 
   const grouped = feeds.reduce((acc, f) => {
     const d = fmtDate(f.timestamp);
@@ -322,45 +424,69 @@ function MilkLog() {
   return (
     <div className="tab-content">
 
-      {/* gap alert */}
+      {/* ── baby age selector ── */}
+      <div className="age-card">
+        <div className="age-card__row">
+          <div className="age-card__info">
+            <span className="age-card__icon">👶</span>
+            <div>
+              <div className="age-card__label">Baby's birthday</div>
+              <div className="age-card__val">
+                {birthday
+                  ? <>{fmtAgeWeeks(ageWeeks)} {guide && <span className="age-badge">{guide.label}</span>}</>
+                  : <span className="age-card__empty">Set birthday for personalised guide</span>
+                }
+              </div>
+            </div>
+          </div>
+          <button className="age-edit-btn" onPointerUp={() => setShowAgeEdit(v => !v)}>
+            {showAgeEdit ? 'Done' : 'Edit'}
+          </button>
+        </div>
+        {showAgeEdit && (
+          <div className="age-edit-row">
+            <label className="field-label">Date of birth</label>
+            <input
+              type="date"
+              className="field-input"
+              value={birthday}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={e => setBirthday(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── gap alert ── */}
       {gapSinceLastMin != null && !isActive && (
         <div className={`banner ${
-          gapSinceLastMin >= 180 ? 'banner--alert' :
-          gapSinceLastMin >= 120 ? 'banner--warning' : 'banner--normal'
+          gapSinceLastMin >= alertMins ? 'banner--alert' :
+          gapSinceLastMin >= warnMins  ? 'banner--warning' : 'banner--normal'
         }`}>
           <span className="banner__icon">🍼</span>
           <div>
             <strong className="banner__title">
-              {gapSinceLastMin >= 180 ? 'Feed overdue!' :
-               gapSinceLastMin >= 120 ? 'Feed soon' : 'Last feed recorded'}
+              {gapSinceLastMin >= alertMins ? 'Feed overdue!' :
+               gapSinceLastMin >= warnMins  ? 'Feed soon' : 'Last feed recorded'}
             </strong>
             <span className="banner__sub">
               {gapSinceLastMin < 60
-                ? `${gapSinceLastMin} minutes ago`
+                ? `${gapSinceLastMin} min ago`
                 : `${Math.floor(gapSinceLastMin / 60)}h ${gapSinceLastMin % 60}m ago`}
-              {' — newborns feed every 2–3 hours'}
+              {guide ? ` — recommended every ${guide.freqHours}h at this age` : ' — typical gap 2–3 hours'}
             </span>
           </div>
         </div>
       )}
 
-      {/* today summary */}
+      {/* ── today summary ── */}
       <div className="stats-grid">
-        <div className="stat">
-          <span className="stat__val">{todayCount}</span>
-          <span className="stat__lbl">Feeds today</span>
-        </div>
-        <div className="stat">
-          <span className="stat__val">{todayMl > 0 ? `${todayMl}ml` : '—'}</span>
-          <span className="stat__lbl">Total today</span>
-        </div>
-        <div className="stat">
-          <span className="stat__val">{todayMin > 0 ? `${todayMin}m` : '—'}</span>
-          <span className="stat__lbl">Time today</span>
-        </div>
+        <div className="stat"><span className="stat__val">{todayCount}</span><span className="stat__lbl">Feeds today</span></div>
+        <div className="stat"><span className="stat__val">{todayMl > 0 ? `${todayMl}ml` : '—'}</span><span className="stat__lbl">Total today</span></div>
+        <div className="stat"><span className="stat__val">{todayMin > 0 ? `${todayMin}m` : '—'}</span><span className="stat__lbl">Time today</span></div>
       </div>
 
-      {/* feed type picker */}
+      {/* ── feed type picker ── */}
       {!isActive && (
         <div className="feed-types">
           {FEED_TYPES.map(t => (
@@ -376,7 +502,7 @@ function MilkLog() {
         </div>
       )}
 
-      {/* timed feed */}
+      {/* ── timed feed ── */}
       <div className="feed-timed-card">
         <p className="feed-card-label">Timed feed</p>
         {isActive ? (
@@ -386,70 +512,45 @@ function MilkLog() {
               {typeInfo(activeFeed.type).icon} {typeInfo(activeFeed.type).label} in progress…
             </p>
             <div className="btn-row">
-              <button className="btn-main btn-main--stop" onPointerUp={stopFeed}>
-                Stop &amp; save
-              </button>
+              <button className="btn-main btn-main--stop" onPointerUp={stopFeed}>Stop &amp; save</button>
             </div>
           </>
         ) : (
           <div className="btn-row">
-            <button className="btn-main btn-main--milk" onPointerUp={startFeed}>
-              Start feeding timer
-            </button>
+            <button className="btn-main btn-main--milk" onPointerUp={startFeed}>Start feeding timer</button>
           </div>
         )}
       </div>
 
-      {/* manual log */}
+      {/* ── manual log ── */}
       {!isActive && (
         <div className="manual-card">
           <p className="feed-card-label">Log manually</p>
           <div className="manual-fields">
             <div className="field-group">
               <label className="field-label">Amount (ml)</label>
-              <input
-                type="number"
-                className="field-input"
-                placeholder="e.g. 90"
-                value={amount}
-                min="0"
-                step="5"
-                onChange={e => setAmount(e.target.value)}
-              />
+              <input type="number" className="field-input"
+                placeholder={guide ? `e.g. ${guide.bottleMl.split('–')[0]}` : 'e.g. 90'}
+                value={amount} min="0" step="5" onChange={e => setAmount(e.target.value)} />
             </div>
             <div className="field-group">
               <label className="field-label">Duration (min)</label>
-              <input
-                type="number"
-                className="field-input"
-                placeholder="e.g. 15"
-                value={duration}
-                min="0"
-                onChange={e => setDuration(e.target.value)}
-              />
+              <input type="number" className="field-input" placeholder="e.g. 15"
+                value={duration} min="0" onChange={e => setDuration(e.target.value)} />
             </div>
           </div>
           <div className="field-group" style={{ marginTop: 10 }}>
             <label className="field-label">Note (optional)</label>
-            <input
-              type="text"
-              className="field-input"
-              placeholder="e.g. fussy, good latch…"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-            />
+            <input type="text" className="field-input" placeholder="e.g. fussy, good latch…"
+              value={note} onChange={e => setNote(e.target.value)} />
           </div>
-          <button
-            className="btn-log"
-            onPointerUp={logManual}
-            disabled={!amount && !duration}
-          >
+          <button className="btn-log" onPointerUp={logManual} disabled={!amount && !duration}>
             Log feed
           </button>
         </div>
       )}
 
-      {/* history */}
+      {/* ── history ── */}
       {feeds.length > 0 && (
         <section className="history" style={{ marginTop: 8 }}>
           <div className="history__head">
@@ -488,16 +589,33 @@ function MilkLog() {
         <p className="empty">No feeds recorded yet.<br />Start the timer or log manually above.</p>
       )}
 
-      {/* guide */}
+      {/* ── age-aware guide ── */}
       <div className="guide">
-        <h3 className="guide__title">Newborn feeding guide</h3>
-        <div className="guide__rows">
-          <div className="guide__row"><span className="guide__n" style={{ fontSize: 18 }}>📅</span><span>Feed every <strong>2–3 hours</strong> (8–12 times/day)</span></div>
-          <div className="guide__row"><span className="guide__n" style={{ fontSize: 18 }}>⏱</span><span>Breastfeed <strong>10–20 min</strong> per side</span></div>
-          <div className="guide__row"><span className="guide__n" style={{ fontSize: 18 }}>🍼</span><span>Bottle: <strong>60–90ml</strong> per feed in first weeks</span></div>
-          <div className="guide__row"><span className="guide__n" style={{ fontSize: 18 }}>💤</span><span>Wake baby if sleeping <strong>&gt;4 hours</strong> to feed</span></div>
-        </div>
-        <p className="guide__note">→ Always follow your midwife or health visitor's advice.</p>
+        <h3 className="guide__title">
+          {guide ? `Feeding guide — ${guide.label}` : 'Feeding guide'}
+        </h3>
+        {guide ? (
+          <>
+            <div className="guide__rows">
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>📅</span><span>Every <strong>{guide.freqHours}h</strong> · <strong>{guide.freqPerDay}x</strong> per day</span></div>
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>🍼</span><span>Bottle: <strong>{guide.bottleMl}ml</strong> per feed</span></div>
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>🤱</span><span>Breast: <strong>{guide.breastMin}</strong></span></div>
+              {guide.sleepWake && (
+                <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>💤</span><span>Wake to feed if sleeping <strong>&gt;{guide.sleepWake}h</strong></span></div>
+              )}
+            </div>
+            <p className="guide__note">{guide.notes}</p>
+          </>
+        ) : (
+          <>
+            <div className="guide__rows">
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>👶</span><span>Set your baby's birthday above for personalised guidelines</span></div>
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>📅</span><span>Newborns: every <strong>2–3h</strong>, 8–12 times/day</span></div>
+              <div className="guide__row"><span className="guide__n" style={{ fontSize: 16 }}>🍼</span><span>Bottle: <strong>60–90ml</strong> per feed in first weeks</span></div>
+            </div>
+            <p className="guide__note">→ Always follow your midwife or health visitor's advice.</p>
+          </>
+        )}
       </div>
     </div>
   );

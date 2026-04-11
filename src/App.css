@@ -220,6 +220,82 @@
   letter-spacing: .3px;
 }
 
+/* ── baby age card ──────────────────────────────────── */
+.age-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.age-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.age-card__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.age-card__icon { font-size: 22px; flex-shrink: 0; }
+.age-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+.age-card__val {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.age-card__empty {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.age-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  color: var(--text-secondary);
+}
+.age-edit-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  touch-action: manipulation;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.age-edit-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.age-edit-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* ── feed type picker ───────────────────────────────── */
 .feed-types {
   display: flex;
