@@ -1,27 +1,47 @@
-# ⏱ Labor Tracker + 🍼 Milk Log
+# 寶寶日記 · Baby Diary
 
-A focused, mobile-first two-tab app for new parents.
+A full-featured bilingual (Cantonese / English) baby tracking app. Default language: 粵語.
 
 ## Features
 
-### ⏱ Labor Tracker
-- Start / Stop contraction timer (reliable `onPointerUp` handler — no blocked taps)
-- 5-1-1 rule auto-detection with colour-coded alerts
-- Live average duration and frequency stats
-- Full contraction history with gap and frequency per entry
+### 👶 Baby Log (after birth)
+- 16 trackable actions with emoji + colour coding
+- **Feeding**: Left/Right/Both breast, Formula, Bottle — with live timer or manual ml entry
+- **Sleep/Wake**: live timer, daily total hours
+- **Diaper**: Pee 💧, Poo 💩, Change 🩲
+- **Activities**: Tummy time, Bath — with timer
+- **Health**: Medicine, Weight (g), Mood (happy/neutral/fussy/crying)
+- **Notes**: free-text diary entries
+- Age-aware feeding guide (0–12+ months, 8 stages)
+- Gap alert banner (adjusts thresholds per age)
+- Today's summary stats (feeds, ml, sleep, diapers)
+
+### 📅 Diary
+- **Left panel**: Monthly calendar with activity dot indicators and emoji previews
+- **Right panel**: Day timeline with all entries
+- Day / Month / Year view switcher
+- Day summary chips (count per category, total ml, total sleep hours)
+- Delete individual entries
+
+### 📊 Analysis
+- 7-day and 30-day range toggle
+- **Charts**: Feeding count, Milk ml, Sleep hours, Diaper changes (custom bar charts)
+- **Weight trend** visualisation
+- **Activity breakdown** horizontal bars
+- Summary averages (feeds/day, sleep hours, diapers/day, avg ml)
+- **Export CSV** and **Export JSON**
+
+### ⏱ Labor Tracker (pre-birth & always accessible)
+- Reliable `onPointerUp` stop button (no blocked taps on mobile)
+- 5-1-1 rule auto-detection with colour-coded banners
+- Average duration / frequency stats
+- Full history with gap and frequency per entry
 - Undo last, delete individual, clear all
-- Data persists in `localStorage`
 
-### 🍼 Milk Log
-- **Feed type picker** — Left breast, Right breast, Both breasts, Bottle, Formula
-- **Timed feed** — start a live timer, stop to auto-save duration
-- **Manual log** — enter amount (ml), duration (min), optional note
-- **Today's summary** — count, total ml, total time
-- **Gap alert banner** — warns after 2 h, alerts after 3 h since last feed
-- **Feed history** grouped by day with all details
-- Newborn feeding reference guide built in
-
----
+### ⚙️ Settings
+- **Language toggle**: 粵語 ↔ English (also accessible via header button)
+- Edit baby name, birthday / due date, born/not-born status
+- Clear all data
 
 ## Run locally
 
@@ -31,32 +51,15 @@ npm start
 # → http://localhost:3000
 ```
 
----
-
-## Push to GitHub
+## Push to GitHub & deploy on Vercel
 
 ```bash
 git init
 git add .
-git commit -m "⏱🍼 Labor tracker + Milk log"
-
-# Create a repo at github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/labor-tracker.git
-git branch -M main
+git commit -m "寶寶日記 v2 — bilingual baby tracker"
+git remote add origin https://github.com/YOUR_USERNAME/baby-diary.git
 git push -u origin main
 ```
 
----
-
-## Deploy on Vercel
-
-1. Go to [vercel.com](https://vercel.com) → **Add New Project**
-2. Import your GitHub repo
-3. Vercel auto-detects Create React App → click **Deploy**
-4. Every push to `main` redeploys automatically ✓
-
-Or via CLI:
-```bash
-npm i -g vercel
-vercel --prod
-```
+Then: vercel.com → Add New Project → Import repo → Deploy.
+Every push to `main` redeploys automatically.
