@@ -105,7 +105,18 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
     const hrs = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
+    const formatPreciseDuration = (totalSec, lang) => {
+      if (!totalSec) return "";
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
 
+      const parts = [];
+      if (h > 0) parts.push(`${h}${lang === "zh" ? "時" : "h"}`);
+      if (m > 0 || h > 0) parts.push(`${m}${lang === "zh" ? "分" : "m"}`);
+      parts.push(`${s}${lang === "zh" ? "秒" : "s"}`);
+      return parts.join(" ");
+    };
     setActiveTimer(null);
     setElapsed(0);
     setSelectedAction(at.type);
@@ -465,37 +476,40 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
         </div>
       )}
 
-      {/* ── recent entries ── */}
       {todayEntries.length > 0 && !showForm && (
         <div className="recent-entries">
           <div className="recent-title">
             {lang === "zh" ? "今天記錄" : "Today's log"}
           </div>
           <ul className="entry-list">
-            {todayEntries.slice(0, 8).map((e) => {
-              const a = ACTIONS[e.type];
-              if (!a) return null;
-              return (
-                <li
-                  key={e.id}
-                  className="entry-row"
-                  style={{ borderLeftColor: a.color }}
-                >
-                  <span className="entry-emoji">{a.emoji}</span>
-                  <div className="entry-info">
-                    <span className="entry-time">{fmtTime(e.timestamp)}</span>
-                    <span className="entry-detail">
-                      {t[a.key]}
-                      {e.durationSec != null &&
-                        ` · ${Math.round(e.durationSec / 60)}${lang === "zh" ? "分" : " min"}`}
-                      {e.amountMl != null && ` · ${e.amountMl}ml`}
-                      {e.weightG != null && ` · ${e.weightG}g`}
-                      {e.note && ` · ${e.note}`}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
+            {/* Sort descending by timestamp */}
+            {[...todayEntries]
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, 10)
+              .map((e) => {
+                const a = ACTIONS[e.type];
+                if (!a) return null;
+                return (
+                  <li
+                    key={e.id}
+                    className="entry-row"
+                    style={{ borderLeftColor: a.color }}
+                  >
+                    <span className="entry-emoji">{a.emoji}</span>
+                    <div className="entry-info">
+                      <span className="entry-time">{fmtTime(e.timestamp)}</span>
+                      <span className="entry-detail">
+                        <strong>{t[a.key]}</strong>
+                        {e.durationSec != null &&
+                          ` · ${formatPreciseDuration(e.durationSec, lang)}`}
+                        {e.amountMl != null && ` · ${e.amountMl}ml`}
+                        {e.weightG != null && ` · ${e.weightG}g`}
+                        {e.note && <div className="entry-note">{e.note}</div>}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
           </ul>
         </div>
       )}
