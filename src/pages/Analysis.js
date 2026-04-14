@@ -11,6 +11,8 @@ import {
   exportToJSON,
   exportToFormattedText,
   importFromJSON,
+  importFromCSV,
+  importFromFormattedText,
 } from "../utils/helpers";
 
 // ── WHO growth reference data (simplified percentiles) ────────────────────
@@ -416,17 +418,29 @@ export default function Analysis({ t, lang, entries, baby }) {
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const fileName = file.name.toLowerCase();
     const reader = new FileReader();
+
     reader.onload = (ev) => {
       try {
-        const { entries: imp } = importFromJSON(ev.target.result);
-        if (!Array.isArray(imp)) throw new Error("Invalid format");
-        setImportError(
-          zh ? `已匯入 ${imp.length} 條記錄` : `Imported ${imp.length} entries`,
-        );
+        let data;
+        if (fileName.endsWith(".json")) data = importFromJSON(ev.target.result);
+        else if (fileName.endsWith(".csv"))
+          data = importFromCSV(ev.target.result);
+        else if (fileName.endsWith(".txt"))
+          data = importFromFormattedText(ev.target.result);
+
+        if (data?.entries?.length) {
+          // Log counts for user feedback
+          setImportError(
+            zh
+              ? `已匯入 ${data.entries.length} 條記錄`
+              : `Imported ${data.entries.length} entries`,
+          );
+        }
       } catch {
         setImportError(
-          zh ? "匯入失敗：格式錯誤" : "Import failed: invalid format",
+          zh ? "匯入失敗：格式不符" : "Import failed: format error",
         );
       }
     };

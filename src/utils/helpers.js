@@ -362,6 +362,74 @@ export function importFromJSON(jsonStr) {
   return { entries: data.entries || [], baby: data.baby || null };
 }
 
+export function importFromCSV(csvText) {
+  const lines = csvText.split("\n").filter((line) => line.trim());
+  if (lines.length < 2) return { entries: [] };
+
+  const headers = lines[0].split(",");
+  const entries = lines.slice(1).map((line) => {
+    const values = line.split(",");
+    const entry = {};
+    headers.forEach((header, i) => {
+      const val = values[i]?.replace(/"/g, "").trim();
+      // Restore Date/Time to timestamp
+      if (header === "Date") entry._date = val;
+      if (header === "Time") entry._time = val;
+      // Convert numeric strings back to numbers
+      entry[header] = val === "" || isNaN(val) ? val : Number(val);
+    });
+
+    // Reconstruct timestamp from CSV Date and Time columns
+    entry.timestamp = new Date(`${entry._date}T${entry._time}`).getTime();
+    entry.type = entry.Action; // Map CSV "Action" back to "type"
+    delete entry._date;
+    delete entry._time;
+    delete entry.Action;
+    return entry;
+  });
+  return { entries };
+}
+
+export function importFromFormattedText(text) {
+  const entries = [];
+  const lines = text.split("\n");
+  let currentDateKey = null;
+
+  lines.forEach((line) => {
+    // Detect Date Header (e.g., "2026-04-14")
+    const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      currentDateKey = dateMatch[1];
+      return;
+    }
+
+    // Detect Entry Line (e.g., "14:30   Milk 120ml")
+    const entryMatch = line.match(/^(\d{2}:\d{2})\s+([^\s]+)(.*)/);
+    if (entryMatch && currentDateKey) {
+      const [, time, label, details] = entryMatch;
+      const ts = new Date(`${currentDateKey}T${time}`).getTime();
+
+      // Reverse lookup type by label
+      const type = Object.keys(ACTIONS).find(
+        (k) => ACTIONS[k].labelEn === label || ACTIONS[k].labelZh === label,
+      );
+
+      if (type) {
+        const entry = {
+          id: Math.random().toString(36).substr(2, 9),
+          timestamp: ts,
+          type,
+        };
+        // Basic detail extraction (ml)
+        const mlMatch = details.match(/(\d+)ml/);
+        if (mlMatch) entry.amountMl = Number(mlMatch[1]);
+        entries.push(entry);
+      }
+    }
+  });
+  return { entries };
+}
+
 function downloadFile(content, filename, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
