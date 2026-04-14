@@ -5,15 +5,7 @@ import {
   DIAPER_ACTIONS,
   GROWTH_ACTIONS,
 } from "../utils/actions";
-import {
-  fmtDateKey,
-  exportToCSV,
-  exportToJSON,
-  exportToFormattedText,
-  importFromJSON,
-  importFromCSV,
-  importFromFormattedText,
-} from "../utils/helpers";
+import { fmtDateKey } from "../utils/helpers";
 
 // ── WHO growth reference data (simplified percentiles) ────────────────────
 const WHO_WEIGHT = {
@@ -336,7 +328,6 @@ export default function Analysis({ t, lang, entries, baby }) {
     new Set(["feeds", "milk", "sleep", "diapers"]),
   );
   const [growthMetric, setGrowthMetric] = useState("weight");
-  const [importError, setImportError] = useState("");
 
   const keys = useMemo(() => {
     const n = range === "7" ? 7 : 30;
@@ -414,38 +405,6 @@ export default function Analysis({ t, lang, entries, baby }) {
   };
   const showAll = () => setActive(new Set(CHART_CONFIGS.map((c) => c.id)));
   const hideAll = () => setActive(new Set());
-
-  const handleImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const fileName = file.name.toLowerCase();
-    const reader = new FileReader();
-
-    reader.onload = (ev) => {
-      try {
-        let data;
-        if (fileName.endsWith(".json")) data = importFromJSON(ev.target.result);
-        else if (fileName.endsWith(".csv"))
-          data = importFromCSV(ev.target.result);
-        else if (fileName.endsWith(".txt"))
-          data = importFromFormattedText(ev.target.result);
-
-        if (data?.entries?.length) {
-          // Log counts for user feedback
-          setImportError(
-            zh
-              ? `已匯入 ${data.entries.length} 條記錄`
-              : `Imported ${data.entries.length} entries`,
-          );
-        }
-      } catch {
-        setImportError(
-          zh ? "匯入失敗：格式不符" : "Import failed: format error",
-        );
-      }
-    };
-    reader.readAsText(file);
-  };
 
   return (
     <div className="analysis-page">
@@ -585,70 +544,6 @@ export default function Analysis({ t, lang, entries, baby }) {
           metric={growthMetric}
           lang={lang}
         />
-      </div>
-
-      {/* ── Export / Import ── */}
-      <div className="chart-card">
-        <div className="chart-title">{zh ? "匯出資料" : "Export data"}</div>
-        <div className="export-btns">
-          <button
-            className="export-btn"
-            onPointerUp={() => exportToCSV(entries)}
-          >
-            📄 CSV
-          </button>
-          <button
-            className="export-btn"
-            onPointerUp={() => exportToJSON(entries, baby)}
-          >
-            📦 JSON
-          </button>
-          <button
-            className="export-btn"
-            onPointerUp={() => {
-              const txt = exportToFormattedText(entries, lang);
-              const blob = new Blob([txt], { type: "text/plain" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "baby-diary-log.txt";
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-          >
-            📋 {zh ? "日誌" : "Log text"}
-          </button>
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <label className="field-label">
-            {zh ? "匯入 JSON" : "Import JSON"}
-          </label>
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            style={{
-              display: "block",
-              marginTop: 6,
-              fontSize: 13,
-              color: "var(--text-secondary)",
-            }}
-          />
-          {importError && (
-            <div
-              style={{
-                fontSize: 12,
-                marginTop: 4,
-                color:
-                  importError.includes("失敗") || importError.includes("failed")
-                    ? "#dc2626"
-                    : "#059669",
-              }}
-            >
-              {importError}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

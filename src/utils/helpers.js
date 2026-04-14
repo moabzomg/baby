@@ -220,90 +220,51 @@ export function tempStatus(t) {
 }
 
 // ── Export ───────────────────────────────────────────────────────────────
-export function exportToFormattedText(entries, lang) {
-  // Group by day
+export function exportToFormattedText(entries) {
+  // Remove lang param or ignore it
+  const lines = [];
   const byDay = {};
+
   entries.forEach((e) => {
     const k = fmtDateKey(e.timestamp);
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(e);
   });
 
-  const sleepIssues = getSleepIssues(entries);
-  const lines = [];
+  Object.entries(byDay)
+    .sort()
+    .forEach(([dateKey, dayEntries]) => {
+      const dayTs = new Date(dateKey).getTime();
+      // Force English Locale for date header
+      lines.push(
+        new Date(dayTs).toLocaleDateString("en-GB", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+      );
+      lines.push("");
 
-  for (const [dateKey, dayEntries] of Object.entries(byDay).sort()) {
-    const dayTs = new Date(dateKey).getTime();
-    lines.push(fmtDateHeader(dayTs, lang));
-    lines.push("");
+      const sorted = [...dayEntries].sort((a, b) => a.timestamp - b.timestamp);
+      sorted.forEach((e) => {
+        const a = ACTIONS[e.type];
+        if (!a) return;
 
-    // Sort by time
-    const sorted = [...dayEntries].sort((a, b) => a.timestamp - b.timestamp);
+        let detail = "";
+        if (e.type === "breastfeed") {
+          detail = ` L ${e.breastL || 0}m / R ${e.breastR || 0}m`;
+        } else if (e.amountMl) {
+          detail = ` ${e.amountMl}ml`;
+        } else if (e.valueNum) {
+          detail = ` ${e.valueNum}${a.unit || ""}`;
+        }
 
-    // Find sleep durations
-    let lastSleepTs = null;
-    const sleepDurations = {};
-    for (const e of sorted) {
-      if (e.type === "sleep") lastSleepTs = e.timestamp;
-      if (e.type === "wake" && lastSleepTs) {
-        sleepDurations[e.id] = Math.floor((e.timestamp - lastSleepTs) / 1000);
-      }
-    }
-
-    for (const e of sorted) {
-      const a = ACTIONS[e.type];
-      if (!a) continue;
-      const warn = sleepIssues.has(e.id) ? " ( ! )" : "";
-      let detail = "";
-
-      if (e.type === "breastfeed") {
-        const parts = [];
-        if (e.breastL != null) parts.push(`L ${e.breastL}m`);
-        if (e.breastR != null) parts.push(`R ${e.breastR}m`);
-        detail = parts.length ? ` ${parts.join(" / ")}` : " Breastfeeding";
-      } else if (e.type === "wake" && sleepDurations[e.id]) {
-        detail = ` (${fmtDuration(sleepDurations[e.id])})`;
-      } else if (e.amountMl != null) {
-        detail = ` ${e.amountMl}ml`;
-      } else if (e.valueNum != null) {
-        detail = ` ${e.valueNum}${a.unit || ""}`;
-      } else if (e.note) {
-        detail = ` ${e.note}`;
-      }
-
-      const label = lang === "zh" ? a.labelZh : a.labelEn;
-      lines.push(`${fmtTime24(e.timestamp)}   ${label}${detail}${warn}`);
-    }
-
-    // Day totals
-    lines.push("");
-    const feeds = sorted.filter((e) => e.type === "breastfeed");
-    const totalBfL = feeds.reduce((s, e) => s + (e.breastL || 0), 0);
-    const totalBfR = feeds.reduce((s, e) => s + (e.breastR || 0), 0);
-    lines.push(`Total Breastfeeding time L ${totalBfL}m / R ${totalBfR}m`);
-
-    const fmls = sorted.filter((e) =>
-      ["formula", "bottle", "ebm"].includes(e.type),
-    );
-    const fmlMl = fmls.reduce((s, e) => s + (e.amountMl || 0), 0);
-    lines.push(`Had formula ${fmls.length}times ${fmlMl}ml`);
-
-    const sleepSecs = Object.values(sleepDurations).reduce((a, b) => a + b, 0);
-    const sleepH = Math.floor(sleepSecs / 3600),
-      sleepM = Math.floor((sleepSecs % 3600) / 60);
-    lines.push(`Total sleep ${sleepH}h${sleepM}m`);
-
-    const pees = sorted.filter((e) =>
-      ["pee", "pee_poo"].includes(e.type),
-    ).length;
-    const poos = sorted.filter((e) =>
-      ["poo", "pee_poo"].includes(e.type),
-    ).length;
-    lines.push(`Pee ${pees}times`);
-    lines.push(`Poop ${poos}times`);
-    lines.push("");
-    lines.push("----------");
-  }
+        // Always use labelEn
+        lines.push(`${fmtTime24(e.timestamp)}   ${a.labelEn}${detail}`);
+      });
+      lines.push("\n----------\n");
+    });
 
   return lines.join("\n");
 }
@@ -395,24 +356,63 @@ export function importFromFormattedText(text) {
   const lines = text.split("\n");
   let currentDateKey = null;
 
-  lines.forEach((line) => {
-    // Detect Date Header (e.g., "2026-04-14")
-    const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      currentDateKey = dateMatch[1];
-      return;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (
+      !trimmed ||
+      trimmed.startsWith("---") ||
+      trimmed.startsWith("Total") ||
+      trimmed.startsWith("Had") ||
+      trimmed.includes("mo )") ||
+      trimmed.startsWith("[PiyoLog]") ||
+      trimmed.includes("Expressed breast milk")
+    )
+      continue;
+
+    const dateParsed = Date.parse(trimmed);
+    if (!isNaN(dateParsed) && !trimmed.includes(":")) {
+      const d = new Date(dateParsed);
+      currentDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      continue;
     }
 
-    // Detect Entry Line (e.g., "14:30   Milk 120ml")
-    const entryMatch = line.match(/^(\d{2}:\d{2})\s+([^\s]+)(.*)/);
-    if (entryMatch && currentDateKey) {
-      const [, time, label, details] = entryMatch;
-      const ts = new Date(`${currentDateKey}T${time}`).getTime();
+    const entryMatch = trimmed.match(/^(\d{1,2}:\d{2})\s+([^(]+)(.*)/);
 
-      // Reverse lookup type by label
-      const type = Object.keys(ACTIONS).find(
-        (k) => ACTIONS[k].labelEn === label || ACTIONS[k].labelZh === label,
-      );
+    if (entryMatch) {
+      if (!currentDateKey) {
+        return {
+          error: true,
+          line: i + 1,
+          content: trimmed,
+          reason: "Missing Date Header above this line",
+        };
+      }
+
+      let [, time, labelPart, extra] = entryMatch;
+      const ts = new Date(
+        `${currentDateKey}T${time.padStart(5, "0")}`,
+      ).getTime();
+
+      let cleanLabel = labelPart
+        .trim()
+        .replace(/Breastfeeding Breastfeeding/g, "Breastfeeding")
+        .replace(/-up/g, " up")
+        .replace(/\s*\(!\)\s*$/, "");
+
+      const type = Object.keys(ACTIONS).find((k) => {
+        const a = ACTIONS[k];
+        const target = cleanLabel.toLowerCase();
+        return (
+          target === a.labelEn?.toLowerCase() ||
+          target.includes(a.labelEn?.toLowerCase()) ||
+          (target.includes("expressed breast milk") && k === "ebm") ||
+          (target.includes("head size") && k === "head") ||
+          (target.includes("chest size") && k === "chest") ||
+          (target.includes("body temp") && k === "temp")
+        );
+      });
 
       if (type) {
         const entry = {
@@ -420,13 +420,31 @@ export function importFromFormattedText(text) {
           timestamp: ts,
           type,
         };
-        // Basic detail extraction (ml)
-        const mlMatch = details.match(/(\d+)ml/);
+
+        const fullContent = (cleanLabel + extra).toLowerCase();
+
+        const mlMatch = fullContent.match(/(\d+)ml/);
         if (mlMatch) entry.amountMl = Number(mlMatch[1]);
+
+        const valMatch = fullContent.match(/(\d+\.?\d*)\s*(cm|g|°c|kg)/);
+        if (valMatch) entry.valueNum = Number(valMatch[1]);
+
+        const bL = fullContent.match(/l\s*(\d+)m/);
+        const bR = fullContent.match(/r\s*(\d+)m/);
+        if (bL) entry.breastL = Number(bL[1]);
+        if (bR) entry.breastR = Number(bR[1]);
+
         entries.push(entry);
+      } else {
+        return {
+          error: true,
+          line: i + 1,
+          content: trimmed,
+          reason: "Unknown Action label",
+        };
       }
     }
-  });
+  }
   return { entries };
 }
 

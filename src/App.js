@@ -15,7 +15,7 @@ export default function App() {
   const [baby, setBabyState] = useState(() => load("bd_baby", null));
   const [theme, setThemeState] = useState(() => load("bd_theme", "light"));
   const [tab, setTab] = useState("log");
-  const { entries, addEntry, deleteEntry, clearAll } = useEntries();
+  const { entries, setEntries, addEntry, deleteEntry, clearAll } = useEntries();
 
   const t = TRANSLATIONS[lang];
 
@@ -142,6 +142,8 @@ export default function App() {
             lang={lang}
             setLang={setLang}
             baby={baby}
+            entries={entries}
+            setEntries={setEntries}
             setBaby={(b) => {
               setBaby(b);
               setTab(b.hasBorn ? "log" : "labor");
