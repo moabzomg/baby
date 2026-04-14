@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { getBabyAgeWeeks, fmtAgeWeeks } from '../utils/helpers';
+import React, { useState } from "react";
+import { getBabyAgeWeeks, fmtAgeWeeks } from "../utils/helpers";
 
 function validateDate(hasBorn, dateStr) {
   if (!dateStr) return null;
   const entered = new Date(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (isNaN(entered.getTime())) return 'invalidDate';
+  if (isNaN(entered.getTime())) return "invalidDate";
   if (hasBorn) {
-    if (entered > today) return 'birthFuture';
+    if (entered > today) return "birthFuture";
     const twoYearsAgo = new Date(today);
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    if (entered < twoYearsAgo) return 'birthTooOld';
+    if (entered < twoYearsAgo) return "birthTooOld";
   } else {
-    if (entered < today) return 'duePast';
+    if (entered < today) return "duePast";
     const tenMonths = new Date(today);
     tenMonths.setMonth(tenMonths.getMonth() + 10);
-    if (entered > tenMonths) return 'dueTooFar';
+    if (entered > tenMonths) return "dueTooFar";
   }
   return null;
 }
@@ -24,14 +24,14 @@ function validateDate(hasBorn, dateStr) {
 function getDateError(code, lang) {
   const msgs = {
     zh: {
-      invalidDate: '請輸入有效日期',
-      birthFuture: '出生日期不能是未來日期',
-      birthTooOld: '出生日期不能超過2年前',
-      duePast: '預產期不能是過去日期',
-      dueTooFar: '預產期不能超過10個月後',
+      invalidDate: "請輸入有效日期",
+      birthFuture: "出生日期不能是未來日期",
+      birthTooOld: "出生日期不能超過2年前",
+      duePast: "預產期不能是過去日期",
+      dueTooFar: "預產期不能超過10個月後",
     },
     en: {
-      invalidDate: 'Please enter a valid date',
+      invalidDate: "Please enter a valid date",
       birthFuture: "Birth date can't be in the future",
       birthTooOld: "Birth date can't be more than 2 years ago",
       duePast: "Due date can't be in the past",
@@ -41,25 +41,83 @@ function getDateError(code, lang) {
   return msgs[lang]?.[code] || msgs.en[code];
 }
 
-export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) {
+export default function Settings({
+  t,
+  lang,
+  setLang,
+  baby,
+  setBaby,
+  resetAll,
+  entries,
+  setEntries,
+}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...baby });
   const [dateTouched, setDateTouched] = useState(false);
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
 
   const ageWeeks = getBabyAgeWeeks(baby.date);
-
+  const handleExport = () => {
+    const data = {
+      baby,
+      entries,
+      version: "2.0",
+      exportDate: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `baby_diary_${new Date().toISOString().split("T")[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   const dateError = dateTouched ? validateDate(form.hasBorn, form.date) : null;
-  const canSave = form.date.trim() !== '' && validateDate(form.hasBorn, form.date) === null;
+  const canSave =
+    form.date.trim() !== "" && validateDate(form.hasBorn, form.date) === null;
 
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (data.baby && data.entries) {
+          if (
+            window.confirm(
+              lang === "zh"
+                ? "確定要覆蓋現有資料嗎？"
+                : "Overwrite existing data?",
+            )
+          ) {
+            setBaby(data.baby);
+            setEntries(data.entries);
+            alert(lang === "zh" ? "匯入成功！" : "Import successful!");
+          }
+        } else {
+          throw new Error("Invalid format");
+        }
+      } catch (err) {
+        alert(lang === "zh" ? "無效的檔案格式" : "Invalid file format");
+      }
+    };
+    reader.readAsText(file);
+  };
   const handleToggle = (born) => {
-    setForm(f => ({ ...f, hasBorn: born, date: '' }));
+    setForm((f) => ({ ...f, hasBorn: born, date: "" }));
     setDateTouched(false);
   };
 
   const handleSave = () => {
     setDateTouched(true);
-    if (canSave) { setBaby({ ...form, name: form.name?.trim() || '' }); setEditing(false); }
+    if (canSave) {
+      setBaby({ ...form, name: form.name?.trim() || "" });
+      setEditing(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -70,15 +128,20 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
 
   return (
     <div className="settings-page tab-content">
-
       {/* ── language ── */}
       <div className="settings-section">
         <div className="settings-label">{t.language}</div>
         <div className="lang-toggle">
-          <button className={`lang-btn ${lang === 'zh' ? 'active' : ''}`} onPointerUp={() => setLang('zh')}>
+          <button
+            className={`lang-btn ${lang === "zh" ? "active" : ""}`}
+            onPointerUp={() => setLang("zh")}
+          >
             粵語
           </button>
-          <button className={`lang-btn ${lang === 'en' ? 'active' : ''}`} onPointerUp={() => setLang('en')}>
+          <button
+            className={`lang-btn ${lang === "en" ? "active" : ""}`}
+            onPointerUp={() => setLang("en")}
+          >
             English
           </button>
         </div>
@@ -89,7 +152,14 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
         <div className="settings-label-row">
           <div className="settings-label">{t.babyInfo}</div>
           {!editing && (
-            <button className="age-edit-btn" onPointerUp={() => { setForm({...baby}); setDateTouched(false); setEditing(true); }}>
+            <button
+              className="age-edit-btn"
+              onPointerUp={() => {
+                setForm({ ...baby });
+                setDateTouched(false);
+                setEditing(true);
+              }}
+            >
               {t.edit}
             </button>
           )}
@@ -98,20 +168,26 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
         {!editing ? (
           <div className="baby-info-display">
             <div className="bi-row">
-              <span className="bi-key">{lang === 'zh' ? '名字' : 'Name'}</span>
-              <span className="bi-val">{baby.name || '—'}</span>
+              <span className="bi-key">{lang === "zh" ? "名字" : "Name"}</span>
+              <span className="bi-val">{baby.name || "—"}</span>
             </div>
             <div className="bi-row">
-              <span className="bi-key">{baby.hasBorn ? t.babyBirthDate : t.expectedDueDate}</span>
-              <span className="bi-val">{baby.date || '—'}</span>
+              <span className="bi-key">
+                {baby.hasBorn ? t.babyBirthDate : t.expectedDueDate}
+              </span>
+              <span className="bi-val">{baby.date || "—"}</span>
             </div>
             <div className="bi-row">
-              <span className="bi-key">{lang === 'zh' ? '狀態' : 'Status'}</span>
-              <span className="bi-val">{baby.hasBorn ? t.hasBorn : t.notYetBorn}</span>
+              <span className="bi-key">
+                {lang === "zh" ? "狀態" : "Status"}
+              </span>
+              <span className="bi-val">
+                {baby.hasBorn ? t.hasBorn : t.notYetBorn}
+              </span>
             </div>
             {baby.hasBorn && ageWeeks !== null && (
               <div className="bi-row">
-                <span className="bi-key">{lang === 'zh' ? '年齡' : 'Age'}</span>
+                <span className="bi-key">{lang === "zh" ? "年齡" : "Age"}</span>
                 <span className="bi-val">{fmtAgeWeeks(ageWeeks, lang)}</span>
               </div>
             )}
@@ -121,32 +197,45 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
             {/* born toggle */}
             <div className="setup-toggle" style={{ marginBottom: 14 }}>
               <button
-                className={`toggle-btn ${!form.hasBorn ? 'active' : ''}`}
+                className={`toggle-btn ${!form.hasBorn ? "active" : ""}`}
                 onPointerUp={() => handleToggle(false)}
-              >{t.notYetBorn}</button>
+              >
+                {t.notYetBorn}
+              </button>
               <button
-                className={`toggle-btn ${form.hasBorn ? 'active' : ''}`}
+                className={`toggle-btn ${form.hasBorn ? "active" : ""}`}
                 onPointerUp={() => handleToggle(true)}
-              >{t.hasBorn}</button>
+              >
+                {t.hasBorn}
+              </button>
             </div>
 
             {/* date field with validation */}
             <div className="field-group" style={{ marginBottom: 10 }}>
-              <label className="field-label">{form.hasBorn ? t.babyBirthDate : t.expectedDueDate}</label>
+              <label className="field-label">
+                {form.hasBorn ? t.babyBirthDate : t.expectedDueDate}
+              </label>
               <input
                 type="date"
-                className={`field-input ${dateError ? 'field-input--error' : dateTouched && form.date && !dateError ? 'field-input--ok' : ''}`}
+                className={`field-input ${dateError ? "field-input--error" : dateTouched && form.date && !dateError ? "field-input--ok" : ""}`}
                 value={form.date}
                 max={form.hasBorn ? today : undefined}
                 min={!form.hasBorn ? today : undefined}
-                onChange={e => { setForm(f => ({ ...f, date: e.target.value })); setDateTouched(true); }}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, date: e.target.value }));
+                  setDateTouched(true);
+                }}
                 onBlur={() => form.date && setDateTouched(true)}
               />
               {dateError && (
-                <span className="setup-field-error">⚠ {getDateError(dateError, lang)}</span>
+                <span className="setup-field-error">
+                  ⚠ {getDateError(dateError, lang)}
+                </span>
               )}
               {dateTouched && form.date && !dateError && (
-                <span className="setup-field-ok">✓ {lang === 'zh' ? '日期有效' : 'Date looks good'}</span>
+                <span className="setup-field-ok">
+                  ✓ {lang === "zh" ? "日期有效" : "Date looks good"}
+                </span>
               )}
             </div>
 
@@ -157,17 +246,24 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
                 type="text"
                 className="field-input"
                 placeholder={t.babyNamePlaceholder}
-                value={form.name || ''}
+                value={form.name || ""}
                 maxLength={20}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
               />
             </div>
 
             <div className="form-actions">
-              <button className="btn-secondary" onPointerUp={handleCancelEdit}>{t.cancel}</button>
+              <button className="btn-secondary" onPointerUp={handleCancelEdit}>
+                {t.cancel}
+              </button>
               <button
                 className="btn-primary"
-                style={{ background: canSave ? '#111110' : '#ccc', cursor: canSave ? 'pointer' : 'not-allowed' }}
+                style={{
+                  background: canSave ? "#111110" : "#ccc",
+                  cursor: canSave ? "pointer" : "not-allowed",
+                }}
                 onPointerUp={handleSave}
               >
                 {t.done}
@@ -180,10 +276,35 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
       {/* ── data management ── */}
       <div className="settings-section">
         <div className="settings-label">{t.dataManagement}</div>
+        <button
+          className="btn-secondary"
+          style={{ width: "100%", marginBottom: 12 }}
+          onPointerUp={handleExport}
+        >
+          📥 {lang === "zh" ? "導出備份" : "Export Backup"}
+        </button>
+        <label
+          className="btn-secondary"
+          style={{
+            width: "100%",
+            display: "block",
+            textAlign: "center",
+            cursor: "pointer",
+            marginBottom: 12,
+          }}
+        >
+          📤 {lang === "zh" ? "匯入備份" : "Import Backup"}
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            style={{ display: "none" }}
+          />
+        </label>
         <p className="settings-data-hint">
-          {lang === 'zh'
-            ? '清除所有資料後，應用程式將重新開始設定。此操作無法撤銷。'
-            : 'Clearing all data will restart the app from the setup screen. This cannot be undone.'}
+          {lang === "zh"
+            ? "清除所有資料後，應用程式將重新開始設定。此操作無法撤銷。"
+            : "Clearing all data will restart the app from the setup screen. This cannot be undone."}
         </p>
         <button
           className="danger-btn"
@@ -197,8 +318,10 @@ export default function Settings({ t, lang, setLang, baby, setBaby, resetAll }) 
 
       <div className="settings-footer">
         <p>寶寶日記 · Baby Diary v2.0</p>
-        <p style={{ fontSize: 11, marginTop: 4, opacity: .5 }}>
-          {lang === 'zh' ? '所有資料儲存於本機裝置' : 'All data stored locally on this device'}
+        <p style={{ fontSize: 11, marginTop: 4, opacity: 0.5 }}>
+          {lang === "zh"
+            ? "所有資料儲存於本機裝置"
+            : "All data stored locally on this device"}
         </p>
       </div>
     </div>
