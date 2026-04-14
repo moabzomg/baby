@@ -14,7 +14,15 @@ import {
   getGuide,
 } from "../utils/helpers";
 
-export default function BabyLog({ t, lang, baby, entries, addEntry }) {
+export default function BabyLog({
+  t,
+  lang,
+  baby,
+  entries,
+  addEntry,
+  updateEntry,
+}) {
+  const [editingId, setEditingId] = useState(null);
   const [selectedAction, setSelectedAction] = useState(null);
   const [activeTimer, setActiveTimer] = useState(null); // { type, startTime }
   const [elapsed, setElapsed] = useState(0);
@@ -91,7 +99,28 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
       setShowForm(true);
     }
   };
+  const handleEditEntry = (e) => {
+    const action = ACTIONS[e.type];
+    setEditingId(e.id);
+    setSelectedAction(e.type);
 
+    // Decompose durationSec into H:M:S
+    const h = Math.floor((e.durationSec || 0) / 3600);
+    const m = Math.floor(((e.durationSec || 0) % 3600) / 60);
+    const s = (e.durationSec || 0) % 60;
+
+    setForm({
+      amountMl: e.amountMl || "",
+      durationHrs: h > 0 ? String(h) : "",
+      durationMin: String(m),
+      durationSec: String(s),
+      note: e.note || "",
+      mood: e.mood || "",
+      weightG: e.weightG || "",
+      time: new Date(e.timestamp).toTimeString().slice(0, 5),
+    });
+    setShowForm(true);
+  };
   const stopTimer = useCallback(() => {
     const at = activeRef.current;
     if (!at) return;
@@ -138,22 +167,36 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
   const submitLog = () => {
     if (!selectedAction) return;
 
-    // Calculate total seconds from the H/M/S inputs
     const h = parseInt(form.durationHrs || 0) * 3600;
     const m = parseInt(form.durationMin || 0) * 60;
     const s = parseInt(form.durationSec || 0);
-    const calculatedDur = h + m + s || pendingDurRef.current;
+    const finalDuration = h + m + s || null;
 
-    addEntry({
-      timestamp: Date.now(), // Or use form.time logic from previous step
+    // Handle Custom Time
+    const [hrs, mins] = (form.time || "00:00").split(":");
+    const targetDate = new Date();
+    targetDate.setHours(parseInt(hrs), parseInt(mins), 0, 0);
+
+    const payload = {
+      timestamp: targetDate.getTime(),
       type: selectedAction,
-      durationSec: calculatedDur,
+      durationSec: finalDuration,
       amountMl: form.amountMl ? parseFloat(form.amountMl) : null,
       note: form.note.trim(),
       mood: form.mood || null,
       weightG: form.weightG ? parseFloat(form.weightG) : null,
-    });
-    pendingDurRef.current = null;
+    };
+
+    if (editingId) {
+      updateEntry(editingId, payload);
+    } else {
+      addEntry(payload);
+    }
+
+    // Reset
+    setEditingId(null);
+    setShowForm(false);
+    setSelectedAction(null);
     setForm({
       amountMl: "",
       durationHrs: "",
@@ -164,10 +207,7 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
       weightG: "",
       time: "",
     });
-    setShowForm(false);
-    setSelectedAction(null);
   };
-
   const cancelForm = () => {
     setShowForm(false);
     setSelectedAction(null);
@@ -492,8 +532,9 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
                 return (
                   <li
                     key={e.id}
-                    className="entry-row"
-                    style={{ borderLeftColor: a.color }}
+                    className="entry-row entry-row--editable" // Add a class for cursor: pointer
+                    style={{ borderLeftColor: a.color, cursor: "pointer" }}
+                    onPointerUp={() => handleEditEntry(e)} // <--- Trigger edit
                   >
                     <span className="entry-emoji">{a.emoji}</span>
                     <div className="entry-info">

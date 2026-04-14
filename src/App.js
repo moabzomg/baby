@@ -104,6 +104,7 @@ export default function App() {
             baby={baby}
             entries={entries}
             addEntry={addEntry}
+            updateEntry={updateEntry} // <--- Add this
           />
         )}
         {activeTab === "diary" && baby.hasBorn && (
