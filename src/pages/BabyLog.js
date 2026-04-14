@@ -20,7 +20,10 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
   const [elapsed, setElapsed] = useState(0);
   const [form, setForm] = useState({
     amountMl: "",
+    durationHrs: "",
     durationMin: "",
+    durationSec: "",
+    time: "",
     note: "",
     mood: "",
     weightG: "",
@@ -93,35 +96,63 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
     const at = activeRef.current;
     if (!at) return;
     cancelAnimationFrame(rafRef.current);
-    const durSec = Math.max(1, Math.floor((Date.now() - at.startTime) / 1000));
+
+    const totalSeconds = Math.max(
+      1,
+      Math.floor((Date.now() - at.startTime) / 1000),
+    );
+
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
     setActiveTimer(null);
     setElapsed(0);
-    // open form to confirm/add note
     setSelectedAction(at.type);
-    setForm((f) => ({ ...f, durationMin: String(Math.round(durSec / 60)) }));
+
+    setForm((f) => ({
+      ...f,
+      durationHrs: hrs > 0 ? String(hrs) : "",
+      durationMin: String(mins),
+      durationSec: String(secs),
+      time: new Date(at.startTime).toTimeString().slice(0, 5), // Autofill start time
+    }));
+
     setShowForm(true);
-    // store durSec for submission
-    pendingDurRef.current = durSec;
+    pendingDurRef.current = totalSeconds;
   }, []);
 
   const pendingDurRef = useRef(null);
 
   const submitLog = () => {
     if (!selectedAction) return;
-    const durSec =
-      pendingDurRef.current ||
-      (form.durationMin ? parseInt(form.durationMin, 10) * 60 : null);
+
+    // Calculate total seconds from the H/M/S inputs
+    const h = parseInt(form.durationHrs || 0) * 3600;
+    const m = parseInt(form.durationMin || 0) * 60;
+    const s = parseInt(form.durationSec || 0);
+    const calculatedDur = h + m + s || pendingDurRef.current;
+
     addEntry({
-      timestamp: Date.now(),
+      timestamp: Date.now(), // Or use form.time logic from previous step
       type: selectedAction,
-      durationSec: durSec,
+      durationSec: calculatedDur,
       amountMl: form.amountMl ? parseFloat(form.amountMl) : null,
       note: form.note.trim(),
       mood: form.mood || null,
       weightG: form.weightG ? parseFloat(form.weightG) : null,
     });
     pendingDurRef.current = null;
-    setForm({ amountMl: "", durationMin: "", note: "", mood: "", weightG: "" });
+    setForm({
+      amountMl: "",
+      durationHrs: "",
+      durationMin: "",
+      durationSec: "",
+      note: "",
+      mood: "",
+      weightG: "",
+      time: "",
+    });
     setShowForm(false);
     setSelectedAction(null);
   };
@@ -267,23 +298,69 @@ export default function BabyLog({ t, lang, baby, entries, addEntry }) {
               />
             </div>
           )}
+          <div className="field-group">
+            <label className="field-label">
+              {lang === "zh" ? "記錄時間" : "Record Time"}
+            </label>
+            <input
+              type="time"
+              className="field-input"
+              value={form.time || new Date().toTimeString().slice(0, 5)}
+              onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+            />
+          </div>
 
           {action.hasTimer && (
             <div className="field-group">
-              <label className="field-label">{t.durationMin}</label>
-              <input
-                type="number"
-                className="field-input"
-                placeholder="15"
-                value={form.durationMin}
-                min="0"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, durationMin: e.target.value }))
-                }
-              />
+              <label className="field-label">
+                {lang === "zh" ? "持續時間" : "Duration"}
+              </label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="number"
+                    className="field-input"
+                    placeholder="H"
+                    value={form.durationHrs}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, durationHrs: e.target.value }))
+                    }
+                  />
+                  <small style={{ fontSize: "10px", opacity: 0.6 }}>
+                    {lang === "zh" ? "時" : "Hrs"}
+                  </small>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="number"
+                    className="field-input"
+                    placeholder="M"
+                    value={form.durationMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, durationMin: e.target.value }))
+                    }
+                  />
+                  <small style={{ fontSize: "10px", opacity: 0.6 }}>
+                    {lang === "zh" ? "分" : "Min"}
+                  </small>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="number"
+                    className="field-input"
+                    placeholder="S"
+                    value={form.durationSec}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, durationSec: e.target.value }))
+                    }
+                  />
+                  <small style={{ fontSize: "10px", opacity: 0.6 }}>
+                    {lang === "zh" ? "秒" : "Sec"}
+                  </small>
+                </div>
+              </div>
             </div>
           )}
-
           {selectedAction === "weight" && (
             <div className="field-group">
               <label className="field-label">{t.weightG}</label>

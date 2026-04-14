@@ -175,7 +175,12 @@ export default function Analysis({ t, lang, entries, baby }) {
         />
         <StatCard
           emoji="😴"
-          value={`${avgSleep}h`}
+          value={(() => {
+            const totalMinutes = Math.round(avgSleep * 60);
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            return `${h}h ${m}m`;
+          })()}
           sub={t.avgSleepHours}
           color="#a78bfa"
         />

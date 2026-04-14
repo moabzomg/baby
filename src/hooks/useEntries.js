@@ -9,7 +9,14 @@ export default function useEntries() {
   }, [entries]);
 
   const addEntry = (entry) => {
-    setEntries((prev) => [{ id: Date.now(), ...entry }, ...prev]);
+    setEntries((prev) => [
+      {
+        id: Date.now(),
+        timestamp: entry.timestamp || Date.now(),
+        ...entry,
+      },
+      ...prev,
+    ]);
   };
 
   const deleteEntry = (id) => {
