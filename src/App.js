@@ -1,43 +1,45 @@
-import React, { useState } from "react";
-import { TRANSLATIONS } from "./i18n/translations";
-import { load, save } from "./utils/helpers";
-import useEntries from "./hooks/useEntries";
-import Setup from "./pages/Setup";
-import BabyLog from "./pages/BabyLog";
-import Diary from "./pages/Diary";
-import Analysis from "./pages/Analysis";
-import LaborTracker from "./pages/LaborTracker";
-import Settings from "./pages/Settings";
-import "./App.css";
+import React, { useState, useEffect } from 'react';
+import { TRANSLATIONS } from './i18n/translations';
+import { load, save } from './utils/helpers';
+import useEntries from './hooks/useEntries';
+import Setup from './pages/Setup';
+import BabyLog from './pages/BabyLog';
+import Diary from './pages/Diary';
+import Analysis from './pages/Analysis';
+import LaborTracker from './pages/LaborTracker';
+import Settings from './pages/Settings';
+import './App.css';
 
 export default function App() {
-  const [lang, setLangState] = useState(() => load("bd_lang", "zh"));
-  const [baby, setBabyState] = useState(() => load("bd_baby", null));
-  const [tab, setTab] = useState("log");
-  const { entries, addEntry, deleteEntry, clearAll, setEntries } = useEntries();
+  const [lang,  setLangState]  = useState(() => load('bd_lang', 'zh'));
+  const [baby,  setBabyState]  = useState(() => load('bd_baby', null));
+  const [theme, setThemeState] = useState(() => load('bd_theme', 'light'));
+  const [tab,   setTab]        = useState('log');
+  const { entries, addEntry, deleteEntry, updateEntry, clearAll } = useEntries();
 
   const t = TRANSLATIONS[lang];
 
-  const setLang = (l) => {
-    setLangState(l);
-    save("bd_lang", l);
+  // Apply theme to document root
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const setLang  = (l) => { setLangState(l);  save('bd_lang', l); };
+  const setBaby  = (b) => { setBabyState(b);  save('bd_baby', b); };
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setThemeState(next);
+    save('bd_theme', next);
   };
 
-  const setBaby = (b) => {
-    setBabyState(b);
-    save("bd_baby", b);
-  };
-
-  // Full reset: wipe all data AND baby profile → back to Setup
   const resetAll = () => {
-    clearAll(); // clears entries in localStorage
-    localStorage.removeItem("bd_baby");
-    localStorage.removeItem("lt_contractions");
+    clearAll();
+    localStorage.removeItem('bd_baby');
+    localStorage.removeItem('lt_contractions');
     setBabyState(null);
-    setTab("log");
+    setTab('log');
   };
 
-  // Show setup screen if no baby configured
   if (!baby) {
     return (
       <div className="shell">
@@ -46,35 +48,20 @@ export default function App() {
     );
   }
 
-  // Nav depends on whether baby has been born
-  // Labor tracker is only shown BEFORE birth (pre-natal)
   const NAV = baby.hasBorn
     ? [
-        { id: "log", label: lang === "zh" ? "記錄" : "Log", emoji: "👶" },
-        { id: "diary", label: lang === "zh" ? "日記" : "Diary", emoji: "📅" },
-        {
-          id: "analysis",
-          label: lang === "zh" ? "分析" : "Analysis",
-          emoji: "📊",
-        },
-        {
-          id: "settings",
-          label: lang === "zh" ? "設定" : "Settings",
-          emoji: "⚙️",
-        },
+        { id: 'log',      label: lang==='zh'?'記錄':'Log',      emoji: '👶' },
+        { id: 'diary',    label: lang==='zh'?'日記':'Diary',    emoji: '📅' },
+        { id: 'analysis', label: lang==='zh'?'分析':'Analysis', emoji: '📊' },
+        { id: 'settings', label: lang==='zh'?'設定':'Settings', emoji: '⚙️' },
       ]
     : [
-        { id: "labor", label: lang === "zh" ? "陣痛" : "Labor", emoji: "⏱" },
-        {
-          id: "settings",
-          label: lang === "zh" ? "設定" : "Settings",
-          emoji: "⚙️",
-        },
+        { id: 'labor',    label: lang==='zh'?'陣痛':'Labor',    emoji: '⏱' },
+        { id: 'settings', label: lang==='zh'?'設定':'Settings', emoji: '⚙️' },
       ];
 
-  // Ensure active tab is always valid for current nav
-  const validTabIds = NAV.map((n) => n.id);
-  const activeTab = validTabIds.includes(tab) ? tab : NAV[0].id;
+  const validTabIds = NAV.map(n => n.id);
+  const activeTab   = validTabIds.includes(tab) ? tab : NAV[0].id;
 
   return (
     <div className="shell">
@@ -82,57 +69,31 @@ export default function App() {
       <header className="app-header">
         <span className="app-header-title">
           {baby.name
-            ? lang === "zh"
-              ? `${baby.name}的日記`
-              : `${baby.name}'s diary`
+            ? (lang==='zh' ? `${baby.name}的日記` : `${baby.name}'s diary`)
             : t.appName}
         </span>
-        <button
-          className="lang-mini-btn"
-          onPointerUp={() => setLang(lang === "zh" ? "en" : "zh")}
-        >
-          {lang === "zh" ? "EN" : "中"}
-        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          {/* theme toggle */}
+          <span style={{ fontSize:12, color:'var(--text-tertiary)' }}>{theme==='dark'?'🌙':'☀️'}</span>
+          <button className="theme-toggle-btn" onPointerUp={toggleTheme} aria-label="Toggle theme" />
+          {/* lang toggle */}
+          <button className="lang-mini-btn" onPointerUp={() => setLang(lang==='zh'?'en':'zh')}>
+            {lang==='zh'?'EN':'中'}
+          </button>
+        </div>
       </header>
 
-      {/* ── page content ── */}
+      {/* ── pages ── */}
       <main className="app-main">
-        {activeTab === "log" && baby.hasBorn && (
-          <BabyLog
-            t={t}
-            lang={lang}
-            baby={baby}
-            entries={entries}
-            addEntry={addEntry}
-            updateEntry={updateEntry} // <--- Add this
-          />
-        )}
-        {activeTab === "diary" && baby.hasBorn && (
-          <Diary
-            t={t}
-            lang={lang}
-            entries={entries}
-            deleteEntry={deleteEntry}
-          />
-        )}
-        {activeTab === "analysis" && baby.hasBorn && (
-          <Analysis t={t} lang={lang} entries={entries} baby={baby} />
-        )}
-        {activeTab === "labor" && !baby.hasBorn && <LaborTracker t={t} />}
-        {activeTab === "settings" && (
+        {activeTab==='log'      && baby.hasBorn  && <BabyLog    t={t} lang={lang} baby={baby} entries={entries} addEntry={addEntry} deleteEntry={deleteEntry} />}
+        {activeTab==='diary'    && baby.hasBorn  && <Diary      t={t} lang={lang} entries={entries} deleteEntry={deleteEntry} />}
+        {activeTab==='analysis' && baby.hasBorn  && <Analysis   t={t} lang={lang} entries={entries} baby={baby} />}
+        {activeTab==='labor'    && !baby.hasBorn && <LaborTracker t={t} />}
+        {activeTab==='settings' && (
           <Settings
-            t={t}
-            lang={lang}
-            setLang={setLang}
+            t={t} lang={lang} setLang={setLang}
             baby={baby}
-            entries={entries}
-            setEntries={setEntries}
-            setBaby={(b) => {
-              setBaby(b);
-              // If user changes hasBorn status, snap tab to first valid tab
-              const firstTab = b.hasBorn ? "log" : "labor";
-              setTab(firstTab);
-            }}
+            setBaby={(b) => { setBaby(b); setTab(b.hasBorn ? 'log' : 'labor'); }}
             resetAll={resetAll}
           />
         )}
@@ -140,12 +101,10 @@ export default function App() {
 
       {/* ── bottom nav ── */}
       <nav className="bottom-nav">
-        {NAV.map((n) => (
-          <button
-            key={n.id}
-            className={`nav-btn ${activeTab === n.id ? "nav-btn--active" : ""}`}
-            onPointerUp={() => setTab(n.id)}
-          >
+        {NAV.map(n => (
+          <button key={n.id}
+            className={`nav-btn ${activeTab===n.id?'nav-btn--active':''}`}
+            onPointerUp={() => setTab(n.id)}>
             <span className="nav-emoji">{n.emoji}</span>
             <span className="nav-label">{n.label}</span>
           </button>

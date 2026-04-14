@@ -1,173 +1,234 @@
+// ─── Action registry ───────────────────────────────────────────────────────
+// inputType: 'breastfeed' | 'ml_buttons' | 'min_buttons' | 'measurement' |
+//            'temp' | 'diaper_combo' | 'sleep_wake' | 'tap' | 'text'
+// unit: display unit string
+// steps: array of quick-select values for button-style input
+
 export const ACTIONS = {
-  breast: {
-    emoji: "◉",
-    color: "#f9a8d4",
-    bg: "#fdf2f8",
-    key: "breastfeed",
-    category: "feed",
-    hasTimer: true,
-    hasMl: false,
+  // ── Feeding ──────────────────────────────────────────────────────────────
+  breastfeed: {
+    emoji: '🤱', color: '#f9a8d4', bg: '#fdf2f8',
+    labelZh: '母乳', labelEn: 'Breastfeed',
+    category: 'feed', inputType: 'breastfeed',
   },
   formula: {
-    emoji: "🥛",
-    color: "#93c5fd",
-    bg: "#eff6ff",
-    key: "formulaMilk",
-    category: "feed",
-    hasTimer: false,
-    hasMl: true,
+    emoji: '🥛', color: '#93c5fd', bg: '#eff6ff',
+    labelZh: '配方奶', labelEn: 'Formula',
+    category: 'feed', inputType: 'ml_buttons',
+    steps: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 180, 200, 230, 250],
+    unit: 'ml',
+  },
+  ebm: {
+    emoji: '🫙', color: '#fb923c', bg: '#fff7ed',
+    labelZh: '母乳儲存', labelEn: 'EBM',
+    category: 'feed', inputType: 'ml_buttons',
+    steps: [10, 20, 30, 50, 60, 80, 100, 120, 150, 180, 200],
+    unit: 'ml',
   },
   bottle: {
-    emoji: "🍼",
-    color: "#6ee7b7",
-    bg: "#ecfdf5",
-    key: "bottle",
-    category: "feed",
-    hasTimer: false,
-    hasMl: true,
+    emoji: '🍼', color: '#6ee7b7', bg: '#ecfdf5',
+    labelZh: '奶瓶', labelEn: 'Bottle',
+    category: 'feed', inputType: 'ml_buttons',
+    steps: [10, 20, 30, 50, 60, 80, 100, 120, 150, 180, 200, 230, 250],
+    unit: 'ml',
   },
+  pumping: {
+    emoji: '🔧', color: '#c084fc', bg: '#faf5ff',
+    labelZh: '泵奶', labelEn: 'Pumping',
+    category: 'feed', inputType: 'ml_buttons',
+    steps: [10, 20, 30, 50, 60, 80, 100, 120, 150, 180, 200],
+    unit: 'ml',
+  },
+  solid: {
+    emoji: '🥣', color: '#fbbf24', bg: '#fffbeb',
+    labelZh: '固體食物', labelEn: 'Solid food',
+    category: 'feed', inputType: 'text',
+  },
+  snack: {
+    emoji: '🍪', color: '#f97316', bg: '#fff7ed',
+    labelZh: '小食', labelEn: 'Snack',
+    category: 'feed', inputType: 'text',
+  },
+  meal: {
+    emoji: '🍽️', color: '#84cc16', bg: '#f7fee7',
+    labelZh: '正餐', labelEn: 'Meal',
+    category: 'feed', inputType: 'text',
+  },
+  drink: {
+    emoji: '🥤', color: '#38bdf8', bg: '#f0f9ff',
+    labelZh: '飲品', labelEn: 'Drink',
+    category: 'feed', inputType: 'ml_buttons',
+    steps: [10, 20, 30, 50, 60, 80, 100, 120, 150, 180, 200],
+    unit: 'ml',
+  },
+
+  // ── Sleep ────────────────────────────────────────────────────────────────
   sleep: {
-    emoji: "😴",
-    color: "#a78bfa",
-    bg: "#f5f3ff",
-    key: "sleep",
-    category: "sleep",
-    hasTimer: true,
-    hasMl: false,
+    emoji: '😴', color: '#a78bfa', bg: '#f5f3ff',
+    labelZh: '睡覺', labelEn: 'Sleep',
+    category: 'sleep', inputType: 'sleep_wake',
   },
   wake: {
-    emoji: "☀️",
-    color: "#fbbf24",
-    bg: "#fffbeb",
-    key: "wake",
-    category: "sleep",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '☀️', color: '#fbbf24', bg: '#fffbeb',
+    labelZh: '醒來', labelEn: 'Wake up',
+    category: 'sleep', inputType: 'sleep_wake',
   },
+
+  // ── Diaper ───────────────────────────────────────────────────────────────
   pee: {
-    emoji: "💧",
-    color: "#60a5fa",
-    bg: "#eff6ff",
-    key: "pee",
-    category: "diaper",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '💧', color: '#60a5fa', bg: '#eff6ff',
+    labelZh: '小便', labelEn: 'Pee',
+    category: 'diaper', inputType: 'tap',
   },
   poo: {
-    emoji: "💩",
-    color: "#d97706",
-    bg: "#fffbeb",
-    key: "poo",
-    category: "diaper",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '💩', color: '#d97706', bg: '#fffbeb',
+    labelZh: '大便', labelEn: 'Poo',
+    category: 'diaper', inputType: 'tap',
   },
-  diaper: {
-    emoji: "🩲",
-    color: "#86efac",
-    bg: "#f0fdf4",
-    key: "changeDiaper",
-    category: "diaper",
-    hasTimer: false,
-    hasMl: false,
+  pee_poo: {
+    emoji: '💧💩', color: '#86efac', bg: '#f0fdf4',
+    labelZh: '大小便', labelEn: 'Pee+Poo',
+    category: 'diaper', inputType: 'tap',
   },
-  tummy: {
-    emoji: "🐛",
-    color: "#f97316",
-    bg: "#fff7ed",
-    key: "tummyTime",
-    category: "activity",
-    hasTimer: true,
-    hasMl: false,
-  },
-  bath: {
-    emoji: "🛁",
-    color: "#38bdf8",
-    bg: "#f0f9ff",
-    key: "bath",
-    category: "activity",
-    hasTimer: true,
-    hasMl: false,
-  },
-  medicine: {
-    emoji: "💊",
-    color: "#f43f5e",
-    bg: "#fff1f2",
-    key: "medicine",
-    category: "health",
-    hasTimer: false,
-    hasMl: false,
+
+  // ── Health ───────────────────────────────────────────────────────────────
+  temp: {
+    emoji: '🌡️', color: '#f43f5e', bg: '#fff1f2',
+    labelZh: '體溫', labelEn: 'Body temp',
+    category: 'health', inputType: 'temp',
+    // 36.0–42.0 in 0.1 steps
+    unit: '°C',
   },
   weight: {
-    emoji: "⚖️",
-    color: "#8b5cf6",
-    bg: "#f5f3ff",
-    key: "weight",
-    category: "health",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '⚖️', color: '#8b5cf6', bg: '#f5f3ff',
+    labelZh: '體重', labelEn: 'Weight',
+    category: 'health', inputType: 'measurement',
+    steps: [2000,2500,3000,3500,4000,4500,5000,5500,6000,7000,8000,9000,10000],
+    unit: 'g', displayUnit: 'kg',
   },
+  height: {
+    emoji: '📏', color: '#10b981', bg: '#ecfdf5',
+    labelZh: '身高', labelEn: 'Height',
+    category: 'health', inputType: 'measurement',
+    steps: [45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,62,64,66,68,70,72,74,76,78,80],
+    unit: 'cm',
+  },
+  head: {
+    emoji: '🔵', color: '#6366f1', bg: '#eef2ff',
+    labelZh: '頭圍', labelEn: 'Head circ.',
+    category: 'health', inputType: 'measurement',
+    steps: [30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48],
+    unit: 'cm',
+  },
+  chest: {
+    emoji: '🟣', color: '#ec4899', bg: '#fdf2f8',
+    labelZh: '胸圍', labelEn: 'Chest circ.',
+    category: 'health', inputType: 'measurement',
+    steps: [28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45],
+    unit: 'cm',
+  },
+  cough: {
+    emoji: '😮‍💨', color: '#94a3b8', bg: '#f8fafc',
+    labelZh: '咳嗽', labelEn: 'Cough',
+    category: 'health', inputType: 'tap',
+  },
+  vomit: {
+    emoji: '🤢', color: '#84cc16', bg: '#f7fee7',
+    labelZh: '嘔吐', labelEn: 'Vomit',
+    category: 'health', inputType: 'tap',
+  },
+  rash: {
+    emoji: '🔴', color: '#ef4444', bg: '#fef2f2',
+    labelZh: '皮疹', labelEn: 'Rash',
+    category: 'health', inputType: 'text',
+  },
+  injury: {
+    emoji: '🩹', color: '#f97316', bg: '#fff7ed',
+    labelZh: '受傷', labelEn: 'Injury',
+    category: 'health', inputType: 'text',
+  },
+  hospital: {
+    emoji: '🏥', color: '#dc2626', bg: '#fee2e2',
+    labelZh: '求診', labelEn: 'Hospital',
+    category: 'health', inputType: 'text',
+  },
+  vaccine: {
+    emoji: '💉', color: '#0ea5e9', bg: '#f0f9ff',
+    labelZh: '疫苗', labelEn: 'Vaccine',
+    category: 'health', inputType: 'text',
+  },
+  medicine: {
+    emoji: '💊', color: '#f43f5e', bg: '#fff1f2',
+    labelZh: '藥物', labelEn: 'Medicine',
+    category: 'health', inputType: 'text',
+  },
+
+  // ── Activity ─────────────────────────────────────────────────────────────
+  tummy: {
+    emoji: '🐛', color: '#f97316', bg: '#fff7ed',
+    labelZh: '趴趴時間', labelEn: 'Tummy time',
+    category: 'activity', inputType: 'min_buttons',
+    steps: [1,2,3,5,10,15,20,30],
+    unit: 'min',
+  },
+  bath: {
+    emoji: '🛁', color: '#38bdf8', bg: '#f0f9ff',
+    labelZh: '洗澡', labelEn: 'Bath',
+    category: 'activity', inputType: 'min_buttons',
+    steps: [5,10,15,20,30],
+    unit: 'min',
+  },
+  walk: {
+    emoji: '🚶', color: '#22c55e', bg: '#f0fdf4',
+    labelZh: '散步', labelEn: 'Walk',
+    category: 'activity', inputType: 'min_buttons',
+    steps: [5,10,15,20,30,45,60],
+    unit: 'min',
+  },
+  milestone: {
+    emoji: '🌟', color: '#f59e0b', bg: '#fffbeb',
+    labelZh: '里程碑', labelEn: 'Milestone',
+    category: 'activity', inputType: 'text',
+  },
+
+  // ── Other ────────────────────────────────────────────────────────────────
   mood: {
-    emoji: "😊",
-    color: "#f59e0b",
-    bg: "#fffbeb",
-    key: "mood",
-    category: "health",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '😊', color: '#f59e0b', bg: '#fffbeb',
+    labelZh: '心情', labelEn: 'Mood',
+    category: 'other', inputType: 'mood',
   },
   note: {
-    emoji: "📝",
-    color: "#6b7280",
-    bg: "#f9fafb",
-    key: "note",
-    category: "other",
-    hasTimer: false,
-    hasMl: false,
+    emoji: '📝', color: '#6b7280', bg: '#f9fafb',
+    labelZh: '備注', labelEn: 'Note',
+    category: 'other', inputType: 'text',
   },
 };
 
 export const ACTION_GROUPS = [
-  {
-    key: "feed",
-    labelZh: "餵食",
-    labelEn: "Feeding",
-    actions: ["breast", "formula", "bottle"],
-  },
-  {
-    key: "sleep",
-    labelZh: "睡眠",
-    labelEn: "Sleep",
-    actions: ["sleep", "wake"],
-  },
-  {
-    key: "diaper",
-    labelZh: "尿片",
-    labelEn: "Diaper",
-    actions: ["pee", "poo", "diaper"],
-  },
-  {
-    key: "activity",
-    labelZh: "活動",
-    labelEn: "Activity",
-    actions: ["tummy", "bath"],
-  },
-  {
-    key: "health",
-    labelZh: "健康",
-    labelEn: "Health",
-    actions: ["medicine", "weight", "mood"],
-  },
-  { key: "other", labelZh: "其他", labelEn: "Other", actions: ["note"] },
+  { key: 'feed',     labelZh: '餵食', labelEn: 'Feeding',
+    actions: ['breastfeed','formula','ebm','bottle','pumping','solid','snack','meal','drink'] },
+  { key: 'sleep',    labelZh: '睡眠', labelEn: 'Sleep',
+    actions: ['sleep','wake'] },
+  { key: 'diaper',   labelZh: '尿片', labelEn: 'Diaper',
+    actions: ['pee','poo','pee_poo'] },
+  { key: 'health',   labelZh: '健康', labelEn: 'Health',
+    actions: ['temp','weight','height','head','chest','cough','vomit','rash','injury','hospital','vaccine','medicine'] },
+  { key: 'activity', labelZh: '活動', labelEn: 'Activity',
+    actions: ['tummy','bath','walk','milestone'] },
+  { key: 'other',    labelZh: '其他', labelEn: 'Other',
+    actions: ['mood','note'] },
 ];
 
 export const MOOD_OPTIONS = [
-  { id: "happy", emoji: "😄", zh: "開心", en: "Happy" },
-  { id: "neutral", emoji: "😐", zh: "一般", en: "Neutral" },
-  { id: "fussy", emoji: "😣", zh: "煩躁", en: "Fussy" },
-  { id: "crying", emoji: "😢", zh: "哭鬧", en: "Crying" },
+  { id: 'happy',   emoji: '😄', zh: '開心',  en: 'Happy'   },
+  { id: 'neutral', emoji: '😐', zh: '一般',  en: 'Neutral' },
+  { id: 'fussy',   emoji: '😣', zh: '煩躁',  en: 'Fussy'   },
+  { id: 'crying',  emoji: '😢', zh: '哭鬧',  en: 'Crying'  },
 ];
 
-export const FEED_ACTIONS = ["breast", "formula", "bottle"];
-export const SLEEP_ACTIONS = ["sleep", "wake"];
-export const DIAPER_ACTIONS = ["pee", "poo", "diaper"];
+export const FEED_ACTIONS    = ['breastfeed','formula','ebm','bottle','pumping','solid','snack','meal','drink'];
+export const SLEEP_ACTIONS   = ['sleep','wake'];
+export const DIAPER_ACTIONS  = ['pee','poo','pee_poo'];
+export const HEALTH_ACTIONS  = ['temp','weight','height','head','chest'];
+export const BF_ACTIONS      = ['breastfeed'];
+export const GROWTH_ACTIONS  = ['weight','height','head','chest'];
