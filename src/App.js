@@ -14,7 +14,7 @@ export default function App() {
   const [lang, setLangState] = useState(() => load('bd_lang', 'zh'));
   const [baby, setBabyState] = useState(() => load('bd_baby', null));
   const [tab, setTab] = useState('log');
-  const { entries, addEntry, deleteEntry, updateEntry, clearAll } = useEntries();
+  const { entries, addEntry, deleteEntry, clearAll } = useEntries();
 
   const t = TRANSLATIONS[lang];
 
