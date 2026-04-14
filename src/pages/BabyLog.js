@@ -1,29 +1,53 @@
-import React, { useState, useMemo } from 'react';
-import { ACTIONS, ACTION_GROUPS, MOOD_OPTIONS, FEED_ACTIONS, DIAPER_ACTIONS } from '../utils/actions';
-import { fmtTime, fmtTime24, isSameDay, getBabyAgeWeeks, fmtAgeWeeks, getGuide,
-         getSleepIssues, getTempSteps, tempStatus, fmtDuration } from '../utils/helpers';
+import React, { useState, useMemo } from "react";
+import {
+  ACTIONS,
+  ACTION_GROUPS,
+  MOOD_OPTIONS,
+  FEED_ACTIONS,
+  DIAPER_ACTIONS,
+} from "../utils/actions";
+import {
+  fmtTime,
+  isSameDay,
+  getBabyAgeWeeks,
+  fmtAgeWeeks,
+  getGuide,
+  getSleepIssues,
+  getTempSteps,
+  tempStatus,
+} from "../utils/helpers";
 
 // ── Time picker: HH MM with +/- buttons ──────────────────────────────────
 function TimePicker({ value, onChange }) {
   const d = value ? new Date(value) : new Date();
   const setField = (field, delta) => {
     const n = new Date(d);
-    if (field === 'h') n.setHours((n.getHours() + delta + 24) % 24);
-    if (field === 'm') n.setMinutes((n.getMinutes() + delta + 60) % 60);
+    if (field === "h") n.setHours((n.getHours() + delta + 24) % 24);
+    if (field === "m") n.setMinutes((n.getMinutes() + delta + 60) % 60);
     onChange(n.getTime());
   };
   return (
     <div className="time-picker">
       <div className="tp-col">
-        <button className="tp-arrow" onPointerUp={() => setField('h', 1)}>▲</button>
-        <span className="tp-val">{String(d.getHours()).padStart(2,'0')}</span>
-        <button className="tp-arrow" onPointerUp={() => setField('h', -1)}>▼</button>
+        <button className="tp-arrow" onPointerUp={() => setField("h", 1)}>
+          ▲
+        </button>
+        <span className="tp-val">{String(d.getHours()).padStart(2, "0")}</span>
+        <button className="tp-arrow" onPointerUp={() => setField("h", -1)}>
+          ▼
+        </button>
       </div>
       <span className="tp-sep">:</span>
       <div className="tp-col">
-        <button className="tp-arrow" onPointerUp={() => setField('m', 5)}>▲</button>
-        <span className="tp-val">{String(d.getMinutes()).padStart(2,'0')}</span>
-        <button className="tp-arrow" onPointerUp={() => setField('m', -5)}>▼</button>
+        <button className="tp-arrow" onPointerUp={() => setField("m", 5)}>
+          ▲
+        </button>
+        <span className="tp-val">
+          {String(d.getMinutes()).padStart(2, "0")}
+        </span>
+        <button className="tp-arrow" onPointerUp={() => setField("m", -5)}>
+          ▼
+        </button>
       </div>
     </div>
   );
@@ -33,13 +57,14 @@ function TimePicker({ value, onChange }) {
 function QuickButtons({ steps, selected, onSelect, unit, multiSelect }) {
   return (
     <div className="quick-btns">
-      {steps.map(v => (
+      {steps.map((v) => (
         <button
           key={v}
-          className={`quick-btn ${selected === v || (multiSelect && multiSelect.includes(v)) ? 'quick-btn--on' : ''}`}
+          className={`quick-btn ${selected === v || (multiSelect && multiSelect.includes(v)) ? "quick-btn--on" : ""}`}
           onPointerUp={() => onSelect(v)}
         >
-          {v}{unit || ''}
+          {v}
+          {unit || ""}
         </button>
       ))}
     </div>
@@ -47,29 +72,34 @@ function QuickButtons({ steps, selected, onSelect, unit, multiSelect }) {
 }
 
 // ── Breastfeed form ───────────────────────────────────────────────────────
-const BF_STEPS = [1,2,3,4,5,6,7,8,9,10,12,15,20];
+const BF_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20];
 const BF_ORDERS = [
-  { id: 'none', zh: '無順序', en: 'No order' },
-  { id: 'lr',   zh: '先左後右', en: 'L → R' },
-  { id: 'rl',   zh: '先右後左', en: 'R → L' },
+  { id: "none", zh: "無順序", en: "No order" },
+  { id: "lr", zh: "先左後右", en: "L → R" },
+  { id: "rl", zh: "先右後左", en: "R → L" },
 ];
 
 function BreastfeedForm({ lang, form, setForm }) {
-  const t = lang === 'zh';
+  const t = lang === "zh";
   return (
     <div className="bf-form">
       {/* Side selector */}
       <div className="field-group">
-        <label className="field-label">{t ? '哺乳側' : 'Side'}</label>
+        <label className="field-label">{t ? "哺乳側" : "Side"}</label>
         <div className="bf-side-row">
-          {[['L', t?'左':'Left'],['R', t?'右':'Right']].map(([side, label]) => (
+          {[
+            ["L", t ? "左" : "Left"],
+            ["R", t ? "右" : "Right"],
+          ].map(([side, label]) => (
             <button
               key={side}
-              className={`bf-side-btn ${form.bfSides?.includes(side) ? 'bf-side-btn--on' : ''}`}
+              className={`bf-side-btn ${form.bfSides?.includes(side) ? "bf-side-btn--on" : ""}`}
               onPointerUp={() => {
                 const cur = form.bfSides || [];
-                const next = cur.includes(side) ? cur.filter(s=>s!==side) : [...cur, side];
-                setForm(f => ({ ...f, bfSides: next }));
+                const next = cur.includes(side)
+                  ? cur.filter((s) => s !== side)
+                  : [...cur, side];
+                setForm((f) => ({ ...f, bfSides: next }));
               }}
             >
               {label}
@@ -79,28 +109,46 @@ function BreastfeedForm({ lang, form, setForm }) {
       </div>
 
       {/* Per-side duration */}
-      {(form.bfSides||[]).includes('L') && (
+      {(form.bfSides || []).includes("L") && (
         <div className="field-group">
-          <label className="field-label">{t?'左邊時長 (分鐘)':'Left duration (min)'}</label>
-          <QuickButtons steps={BF_STEPS} selected={form.breastL} onSelect={v=>setForm(f=>({...f,breastL:v}))} unit="m" />
+          <label className="field-label">
+            {t ? "左邊時長 (分鐘)" : "Left duration (min)"}
+          </label>
+          <QuickButtons
+            steps={BF_STEPS}
+            selected={form.breastL}
+            onSelect={(v) => setForm((f) => ({ ...f, breastL: v }))}
+            unit="m"
+          />
         </div>
       )}
-      {(form.bfSides||[]).includes('R') && (
+      {(form.bfSides || []).includes("R") && (
         <div className="field-group">
-          <label className="field-label">{t?'右邊時長 (分鐘)':'Right duration (min)'}</label>
-          <QuickButtons steps={BF_STEPS} selected={form.breastR} onSelect={v=>setForm(f=>({...f,breastR:v}))} unit="m" />
+          <label className="field-label">
+            {t ? "右邊時長 (分鐘)" : "Right duration (min)"}
+          </label>
+          <QuickButtons
+            steps={BF_STEPS}
+            selected={form.breastR}
+            onSelect={(v) => setForm((f) => ({ ...f, breastR: v }))}
+            unit="m"
+          />
         </div>
       )}
 
       {/* Order */}
-      {(form.bfSides||[]).length === 2 && (
+      {(form.bfSides || []).length === 2 && (
         <div className="field-group">
-          <label className="field-label">{t?'順序':'Order'}</label>
+          <label className="field-label">{t ? "順序" : "Order"}</label>
           <div className="bf-order-row">
-            {BF_ORDERS.map(o => (
-              <button key={o.id}
-                className={`bf-order-btn ${form.breastOrder===o.id?'bf-order-btn--on':''}`}
-                onPointerUp={() => setForm(f=>({...f,breastOrder:o.id}))}>
+            {BF_ORDERS.map((o) => (
+              <button
+                key={o.id}
+                className={`bf-order-btn ${form.breastOrder === o.id ? "bf-order-btn--on" : ""}`}
+                onPointerUp={() =>
+                  setForm((f) => ({ ...f, breastOrder: o.id }))
+                }
+              >
                 {t ? o.zh : o.en}
               </button>
             ))}
@@ -115,23 +163,43 @@ function BreastfeedForm({ lang, form, setForm }) {
 const TEMP_STEPS = getTempSteps();
 function TempPicker({ value, onChange }) {
   const status = value ? tempStatus(value) : null;
-  const statusColor = { normal:'#22c55e', slight:'#f59e0b', fever:'#ef4444', low:'#60a5fa' };
+  const statusColor = {
+    normal: "#22c55e",
+    slight: "#f59e0b",
+    fever: "#ef4444",
+    low: "#60a5fa",
+  };
   return (
     <div className="temp-picker">
       <div className="temp-scroll">
-        {TEMP_STEPS.map(t => (
-          <button key={t}
-            className={`temp-btn ${value===t?'temp-btn--on':''}`}
-            style={value===t?{background:statusColor[tempStatus(t)],color:'#fff',borderColor:statusColor[tempStatus(t)]}:{}}
-            onPointerUp={() => onChange(t)}>
+        {TEMP_STEPS.map((t) => (
+          <button
+            key={t}
+            className={`temp-btn ${value === t ? "temp-btn--on" : ""}`}
+            style={
+              value === t
+                ? {
+                    background: statusColor[tempStatus(t)],
+                    color: "#fff",
+                    borderColor: statusColor[tempStatus(t)],
+                  }
+                : {}
+            }
+            onPointerUp={() => onChange(t)}
+          >
             {t.toFixed(1)}
           </button>
         ))}
       </div>
       {status && (
-        <div className="temp-status" style={{color:statusColor[status]}}>
-          {status==='normal' ? '✓ Normal' : status==='slight' ? '⚠ Low fever' :
-           status==='fever'  ? '🔴 Fever'  : '❄ Low temp'}
+        <div className="temp-status" style={{ color: statusColor[status] }}>
+          {status === "normal"
+            ? "✓ Normal"
+            : status === "slight"
+              ? "⚠ Low fever"
+              : status === "fever"
+                ? "🔴 Fever"
+                : "❄ Low temp"}
         </div>
       )}
     </div>
@@ -139,13 +207,26 @@ function TempPicker({ value, onChange }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────
-export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry }) {
+export default function BabyLog({
+  t,
+  lang,
+  baby,
+  entries,
+  addEntry,
+  deleteEntry,
+}) {
   const now = Date.now();
   const [selectedAction, setSelectedAction] = useState(null);
   const [form, setForm] = useState({
     timestamp: now,
-    bfSides: [], breastL: null, breastR: null, breastOrder: 'none',
-    amountMl: null, valueNum: null, note: '', mood: '',
+    bfSides: [],
+    breastL: null,
+    breastR: null,
+    breastOrder: "none",
+    amountMl: null,
+    valueNum: null,
+    note: "",
+    mood: "",
   });
 
   const ageWeeks = getBabyAgeWeeks(baby.date);
@@ -153,32 +234,52 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
 
   // Today's entries
   const todayEntries = useMemo(
-    () => entries.filter(e => isSameDay(e.timestamp, now)).sort((a,b)=>a.timestamp-b.timestamp),
-    [entries, now]
+    () =>
+      entries
+        .filter((e) => isSameDay(e.timestamp, now))
+        .sort((a, b) => a.timestamp - b.timestamp),
+    [entries, now],
   );
   const sleepIssues = useMemo(() => getSleepIssues(entries), [entries]);
 
   // Today summary
-  const todayFeeds   = todayEntries.filter(e => FEED_ACTIONS.includes(e.type));
-  const todayMl      = todayFeeds.reduce((s,e)=>s+(e.amountMl||0),0);
-  const todayDiapers = todayEntries.filter(e => DIAPER_ACTIONS.includes(e.type)).length;
+  const todayFeeds = todayEntries.filter((e) => FEED_ACTIONS.includes(e.type));
+  const todayMl = todayFeeds.reduce((s, e) => s + (e.amountMl || 0), 0);
+  const todayDiapers = todayEntries.filter((e) =>
+    DIAPER_ACTIONS.includes(e.type),
+  ).length;
   const sleepPairs = (() => {
-    let lastSleep = null, total = 0;
+    let lastSleep = null,
+      total = 0;
     for (const e of todayEntries) {
-      if (e.type==='sleep') lastSleep = e.timestamp;
-      if (e.type==='wake' && lastSleep) { total += e.timestamp-lastSleep; lastSleep=null; }
+      if (e.type === "sleep") lastSleep = e.timestamp;
+      if (e.type === "wake" && lastSleep) {
+        total += e.timestamp - lastSleep;
+        lastSleep = null;
+      }
     }
     return total;
   })();
 
-  const lastFeed = entries.find(e => FEED_ACTIONS.includes(e.type));
-  const gapMin = lastFeed ? Math.floor((now-lastFeed.timestamp)/60000) : null;
-  const warnMins = guide ? parseFloat(guide.freqHours)*60 : 120;
+  const lastFeed = entries.find((e) => FEED_ACTIONS.includes(e.type));
+  const gapMin = lastFeed
+    ? Math.floor((now - lastFeed.timestamp) / 60000)
+    : null;
+  const warnMins = guide ? parseFloat(guide.freqHours) * 60 : 120;
 
   const openForm = (actionId) => {
     setSelectedAction(actionId);
-    setForm({ timestamp: Date.now(), bfSides:[], breastL:null, breastR:null,
-              breastOrder:'none', amountMl:null, valueNum:null, note:'', mood:'' });
+    setForm({
+      timestamp: Date.now(),
+      bfSides: [],
+      breastL: null,
+      breastR: null,
+      breastOrder: "none",
+      amountMl: null,
+      valueNum: null,
+      note: "",
+      mood: "",
+    });
   };
 
   const submitLog = () => {
@@ -189,7 +290,7 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
       type: selectedAction,
       amountMl: form.amountMl,
       valueNum: form.valueNum,
-      note: form.note?.trim() || '',
+      note: form.note?.trim() || "",
       mood: form.mood || null,
       breastL: form.breastL,
       breastR: form.breastR,
@@ -201,35 +302,47 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
   };
 
   const action = selectedAction ? ACTIONS[selectedAction] : null;
-  const zh = lang === 'zh';
+  const zh = lang === "zh";
 
   const canSubmit = () => {
     if (!selectedAction) return false;
     const a = ACTIONS[selectedAction];
-    if (a.inputType === 'breastfeed') return (form.bfSides||[]).length > 0;
-    if (a.inputType === 'ml_buttons') return form.amountMl != null;
-    if (a.inputType === 'min_buttons') return form.valueNum != null;
-    if (a.inputType === 'measurement') return form.valueNum != null;
-    if (a.inputType === 'temp') return form.valueNum != null;
+    if (a.inputType === "breastfeed") return (form.bfSides || []).length > 0;
+    if (a.inputType === "ml_buttons") return form.amountMl != null;
+    if (a.inputType === "min_buttons") return form.valueNum != null;
+    if (a.inputType === "measurement") return form.valueNum != null;
+    if (a.inputType === "temp") return form.valueNum != null;
     return true; // tap, text, sleep_wake, mood
   };
 
   return (
     <div className="babylog-layout">
-
       {/* ── Gap banner ── */}
       {gapMin !== null && (
-        <div className={`banner ${gapMin>=(warnMins+60)?'banner--alert':gapMin>=warnMins?'banner--warning':'banner--normal'}`}>
+        <div
+          className={`banner ${gapMin >= warnMins + 60 ? "banner--alert" : gapMin >= warnMins ? "banner--warning" : "banner--normal"}`}
+        >
           <span className="banner__icon">🍼</span>
           <div>
             <strong className="banner__title">
-              {gapMin>=(warnMins+60) ? (zh?'餵食已過時！':'Feed overdue!') :
-               gapMin>=warnMins      ? (zh?'快要餵食':'Feed soon')          :
-                                       (zh?'上次餵食已記錄':'Last feed recorded')}
+              {gapMin >= warnMins + 60
+                ? zh
+                  ? "餵食已過時！"
+                  : "Feed overdue!"
+                : gapMin >= warnMins
+                  ? zh
+                    ? "快要餵食"
+                    : "Feed soon"
+                  : zh
+                    ? "上次餵食已記錄"
+                    : "Last feed recorded"}
             </strong>
             <span className="banner__sub">
-              {gapMin<60 ? `${gapMin}${zh?'分鐘前':' min ago'}` : `${Math.floor(gapMin/60)}h ${gapMin%60}m`}
-              {guide && ` · ${zh?'建議每隔':'Recommended every'} ${guide.freqHours}h`}
+              {gapMin < 60
+                ? `${gapMin}${zh ? "分鐘前" : " min ago"}`
+                : `${Math.floor(gapMin / 60)}h ${gapMin % 60}m`}
+              {guide &&
+                ` · ${zh ? "建議每隔" : "Recommended every"} ${guide.freqHours}h`}
             </span>
           </div>
         </div>
@@ -237,30 +350,52 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
 
       {/* ── Today stats ── */}
       <div className="stats-grid-4">
-        <div className="stat"><span className="stat__val">{todayFeeds.length}</span><span className="stat__lbl">{zh?'餵食':'Feeds'}</span></div>
-        <div className="stat"><span className="stat__val">{todayMl>0?`${todayMl}ml`:'—'}</span><span className="stat__lbl">{zh?'奶量':'Milk ml'}</span></div>
-        <div className="stat"><span className="stat__val">{sleepPairs>0?`${Math.round(sleepPairs/3600*10)/10}h`:'—'}</span><span className="stat__lbl">{zh?'睡眠':'Sleep'}</span></div>
-        <div className="stat"><span className="stat__val">{todayDiapers||'—'}</span><span className="stat__lbl">{zh?'尿片':'Diapers'}</span></div>
+        <div className="stat">
+          <span className="stat__val">{todayFeeds.length}</span>
+          <span className="stat__lbl">{zh ? "餵食" : "Feeds"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat__val">
+            {todayMl > 0 ? `${todayMl}ml` : "—"}
+          </span>
+          <span className="stat__lbl">{zh ? "奶量" : "Milk ml"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat__val">
+            {sleepPairs > 0
+              ? `${Math.round((sleepPairs / 3600) * 10) / 10}h`
+              : "—"}
+          </span>
+          <span className="stat__lbl">{zh ? "睡眠" : "Sleep"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat__val">{todayDiapers || "—"}</span>
+          <span className="stat__lbl">{zh ? "尿片" : "Diapers"}</span>
+        </div>
       </div>
 
       {/* ── Action groups ── */}
       {!selectedAction && (
         <div className="action-groups">
-          {ACTION_GROUPS.map(group => (
+          {ACTION_GROUPS.map((group) => (
             <div key={group.key} className="action-group">
-              <div className="action-group-label">{zh ? group.labelZh : group.labelEn}</div>
+              <div className="action-group-label">
+                {zh ? group.labelZh : group.labelEn}
+              </div>
               <div className="action-grid">
-                {group.actions.map(id => {
+                {group.actions.map((id) => {
                   const a = ACTIONS[id];
                   return (
                     <button
                       key={id}
                       className="action-btn"
-                      style={{ '--action-color': a.color, '--action-bg': a.bg }}
+                      style={{ "--action-color": a.color, "--action-bg": a.bg }}
                       onPointerUp={() => openForm(id)}
                     >
                       <span className="action-emoji">{a.emoji}</span>
-                      <span className="action-label">{zh ? a.labelZh : a.labelEn}</span>
+                      <span className="action-label">
+                        {zh ? a.labelZh : a.labelEn}
+                      </span>
                     </button>
                   );
                 })}
@@ -274,83 +409,144 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
       {selectedAction && action && (
         <div className="log-form" style={{ borderColor: action.color }}>
           <div className="log-form-header" style={{ background: action.bg }}>
-            <span style={{ fontSize:24 }}>{action.emoji}</span>
-            <span className="log-form-title">{zh ? action.labelZh : action.labelEn}</span>
-            <button className="log-form-close" onPointerUp={() => setSelectedAction(null)}>✕</button>
+            <span style={{ fontSize: 24 }}>{action.emoji}</span>
+            <span className="log-form-title">
+              {zh ? action.labelZh : action.labelEn}
+            </span>
+            <button
+              className="log-form-close"
+              onPointerUp={() => setSelectedAction(null)}
+            >
+              ✕
+            </button>
           </div>
 
           {/* Time picker */}
-          <div className="field-group" style={{ padding:'12px 16px 0' }}>
-            <label className="field-label">{zh?'時間':'Time'}</label>
-            <TimePicker value={form.timestamp} onChange={ts => setForm(f=>({...f,timestamp:ts}))} />
+          <div className="field-group" style={{ padding: "12px 16px 0" }}>
+            <label className="field-label">{zh ? "時間" : "Time"}</label>
+            <TimePicker
+              value={form.timestamp}
+              onChange={(ts) => setForm((f) => ({ ...f, timestamp: ts }))}
+            />
           </div>
 
           {/* Breastfeed */}
-          {action.inputType === 'breastfeed' && (
-            <div style={{ padding:'0 16px' }}>
+          {action.inputType === "breastfeed" && (
+            <div style={{ padding: "0 16px" }}>
               <BreastfeedForm lang={lang} form={form} setForm={setForm} />
             </div>
           )}
 
           {/* ml buttons */}
-          {action.inputType === 'ml_buttons' && (
-            <div className="field-group" style={{ padding:'12px 16px 0' }}>
-              <label className="field-label">{zh?'奶量 (ml)':'Amount (ml)'}</label>
-              <QuickButtons steps={action.steps} selected={form.amountMl}
-                onSelect={v=>setForm(f=>({...f,amountMl:v}))} unit="ml" />
-              <input type="number" className="field-input" style={{marginTop:8}}
-                placeholder={zh?'或輸入數量…':'or type amount…'}
-                value={form.amountMl??''} min={0} step={5}
-                onChange={e=>setForm(f=>({...f,amountMl:e.target.value?parseFloat(e.target.value):null}))} />
+          {action.inputType === "ml_buttons" && (
+            <div className="field-group" style={{ padding: "12px 16px 0" }}>
+              <label className="field-label">
+                {zh ? "奶量 (ml)" : "Amount (ml)"}
+              </label>
+              <QuickButtons
+                steps={action.steps}
+                selected={form.amountMl}
+                onSelect={(v) => setForm((f) => ({ ...f, amountMl: v }))}
+                unit="ml"
+              />
+              <input
+                type="number"
+                className="field-input"
+                style={{ marginTop: 8 }}
+                placeholder={zh ? "或輸入數量…" : "or type amount…"}
+                value={form.amountMl ?? ""}
+                min={0}
+                step={5}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    amountMl: e.target.value
+                      ? parseFloat(e.target.value)
+                      : null,
+                  }))
+                }
+              />
             </div>
           )}
 
           {/* min buttons */}
-          {action.inputType === 'min_buttons' && (
-            <div className="field-group" style={{ padding:'12px 16px 0' }}>
-              <label className="field-label">{zh?'時長 (分鐘)':'Duration (min)'}</label>
-              <QuickButtons steps={action.steps} selected={form.valueNum}
-                onSelect={v=>setForm(f=>({...f,valueNum:v}))} unit="min" />
+          {action.inputType === "min_buttons" && (
+            <div className="field-group" style={{ padding: "12px 16px 0" }}>
+              <label className="field-label">
+                {zh ? "時長 (分鐘)" : "Duration (min)"}
+              </label>
+              <QuickButtons
+                steps={action.steps}
+                selected={form.valueNum}
+                onSelect={(v) => setForm((f) => ({ ...f, valueNum: v }))}
+                unit="min"
+              />
             </div>
           )}
 
           {/* measurement */}
-          {action.inputType === 'measurement' && (
-            <div className="field-group" style={{ padding:'12px 16px 0' }}>
+          {action.inputType === "measurement" && (
+            <div className="field-group" style={{ padding: "12px 16px 0" }}>
               <label className="field-label">
                 {zh ? action.labelZh : action.labelEn} ({action.unit})
               </label>
-              <QuickButtons steps={action.steps} selected={form.valueNum}
-                onSelect={v=>setForm(f=>({...f,valueNum:v}))} unit={action.unit} />
-              <input type="number" className="field-input" style={{marginTop:8}}
-                placeholder={zh?'或輸入…':'or type…'}
-                value={form.valueNum??''} step={0.1}
-                onChange={e=>setForm(f=>({...f,valueNum:e.target.value?parseFloat(e.target.value):null}))} />
+              <QuickButtons
+                steps={action.steps}
+                selected={form.valueNum}
+                onSelect={(v) => setForm((f) => ({ ...f, valueNum: v }))}
+                unit={action.unit}
+              />
+              <input
+                type="number"
+                className="field-input"
+                style={{ marginTop: 8 }}
+                placeholder={zh ? "或輸入…" : "or type…"}
+                value={form.valueNum ?? ""}
+                step={0.1}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    valueNum: e.target.value
+                      ? parseFloat(e.target.value)
+                      : null,
+                  }))
+                }
+              />
               {/* Show in kg if weight */}
-              {selectedAction==='weight' && form.valueNum &&
-                <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>{(form.valueNum/1000).toFixed(2)} kg</div>}
+              {selectedAction === "weight" && form.valueNum && (
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                  {(form.valueNum / 1000).toFixed(2)} kg
+                </div>
+              )}
             </div>
           )}
 
           {/* temperature */}
-          {action.inputType === 'temp' && (
-            <div className="field-group" style={{ padding:'12px 16px 0' }}>
-              <label className="field-label">{zh?'體溫 (°C)':'Body temperature (°C)'}</label>
-              <TempPicker value={form.valueNum} onChange={v=>setForm(f=>({...f,valueNum:v}))} />
+          {action.inputType === "temp" && (
+            <div className="field-group" style={{ padding: "12px 16px 0" }}>
+              <label className="field-label">
+                {zh ? "體溫 (°C)" : "Body temperature (°C)"}
+              </label>
+              <TempPicker
+                value={form.valueNum}
+                onChange={(v) => setForm((f) => ({ ...f, valueNum: v }))}
+              />
             </div>
           )}
 
           {/* mood */}
-          {action.inputType === 'mood' && (
-            <div className="field-group" style={{ padding:'12px 16px 0' }}>
-              <label className="field-label">{zh?'心情':'Mood'}</label>
+          {action.inputType === "mood" && (
+            <div className="field-group" style={{ padding: "12px 16px 0" }}>
+              <label className="field-label">{zh ? "心情" : "Mood"}</label>
               <div className="mood-grid">
-                {MOOD_OPTIONS.map(m=>(
-                  <button key={m.id}
-                    className={`mood-btn ${form.mood===m.id?'mood-btn--active':''}`}
-                    onPointerUp={()=>setForm(f=>({...f,mood:m.id}))}>
-                    <span style={{fontSize:20}}>{m.emoji}</span>
-                    <span>{zh?m.zh:m.en}</span>
+                {MOOD_OPTIONS.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`mood-btn ${form.mood === m.id ? "mood-btn--active" : ""}`}
+                    onPointerUp={() => setForm((f) => ({ ...f, mood: m.id }))}
+                  >
+                    <span style={{ fontSize: 20 }}>{m.emoji}</span>
+                    <span>{zh ? m.zh : m.en}</span>
                   </button>
                 ))}
               </div>
@@ -358,24 +554,35 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
           )}
 
           {/* Note */}
-          <div className="field-group" style={{ padding:'12px 16px 0' }}>
-            <label className="field-label">{zh?'備注（可選）':'Note (optional)'}</label>
-            <input type="text" className="field-input"
-              placeholder={zh?'例：睡得很好…':'e.g. slept well…'}
+          <div className="field-group" style={{ padding: "12px 16px 0" }}>
+            <label className="field-label">
+              {zh ? "備注（可選）" : "Note (optional)"}
+            </label>
+            <input
+              type="text"
+              className="field-input"
+              placeholder={zh ? "例：睡得很好…" : "e.g. slept well…"}
               value={form.note}
-              onChange={e=>setForm(f=>({...f,note:e.target.value}))} />
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+            />
           </div>
 
           <div className="form-actions">
-            <button className="btn-secondary" onPointerUp={()=>setSelectedAction(null)}>
-              {zh?'取消':'Cancel'}
+            <button
+              className="btn-secondary"
+              onPointerUp={() => setSelectedAction(null)}
+            >
+              {zh ? "取消" : "Cancel"}
             </button>
             <button
               className="btn-primary"
-              style={{ background: canSubmit() ? action.color : '#ccc', cursor: canSubmit()?'pointer':'not-allowed' }}
+              style={{
+                background: canSubmit() ? action.color : "#ccc",
+                cursor: canSubmit() ? "pointer" : "not-allowed",
+              }}
               onPointerUp={canSubmit() ? submitLog : undefined}
             >
-              {zh?'記錄':'Log'}
+              {zh ? "記錄" : "Log"}
             </button>
           </div>
         </div>
@@ -384,35 +591,45 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
       {/* ── Today's log ── */}
       {!selectedAction && todayEntries.length > 0 && (
         <div className="recent-entries">
-          <div className="recent-title">{zh?'今天記錄':"Today's log"}</div>
+          <div className="recent-title">{zh ? "今天記錄" : "Today's log"}</div>
           <ul className="entry-list">
-            {[...todayEntries].reverse().map(e => {
+            {[...todayEntries].reverse().map((e) => {
               const a = ACTIONS[e.type];
               if (!a) return null;
               const warn = sleepIssues.has(e.id);
-              let detail = '';
-              if (e.type === 'breastfeed') {
+              let detail = "";
+              if (e.type === "breastfeed") {
                 const parts = [];
                 if (e.breastL != null) parts.push(`L ${e.breastL}m`);
                 if (e.breastR != null) parts.push(`R ${e.breastR}m`);
-                detail = parts.join(' / ');
+                detail = parts.join(" / ");
               } else if (e.amountMl != null) detail = `${e.amountMl}ml`;
-              else if (e.valueNum  != null) detail = `${e.valueNum}${a.unit||''}`;
-              else if (e.note)              detail = e.note;
+              else if (e.valueNum != null)
+                detail = `${e.valueNum}${a.unit || ""}`;
+              else if (e.note) detail = e.note;
 
               return (
-                <li key={e.id} className={`entry-row ${warn?'entry-row--warn':''}`} style={{ borderLeftColor: a.color }}>
+                <li
+                  key={e.id}
+                  className={`entry-row ${warn ? "entry-row--warn" : ""}`}
+                  style={{ borderLeftColor: a.color }}
+                >
                   <span className="entry-emoji">{a.emoji}</span>
                   <div className="entry-info">
                     <span className="entry-time">{fmtTime(e.timestamp)}</span>
                     <span className="entry-detail">
-                      {zh?a.labelZh:a.labelEn}
+                      {zh ? a.labelZh : a.labelEn}
                       {detail && ` · ${detail}`}
                       {e.note && detail && ` · ${e.note}`}
                       {warn && <span className="warn-badge"> (!)</span>}
                     </span>
                   </div>
-                  <button className="entry-del" onPointerUp={() => deleteEntry(e.id)}>✕</button>
+                  <button
+                    className="entry-del"
+                    onPointerUp={() => deleteEntry(e.id)}
+                  >
+                    ✕
+                  </button>
                 </li>
               );
             })}
@@ -424,13 +641,42 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
       {guide && !selectedAction && (
         <div className="guide">
           <h3 className="guide__title">
-            {zh?'餵食指南':'Feeding guide'} — {zh?'寶寶':'Baby'} {fmtAgeWeeks(ageWeeks,lang)}
+            {zh ? "餵食指南" : "Feeding guide"} — {zh ? "寶寶" : "Baby"}{" "}
+            {fmtAgeWeeks(ageWeeks, lang)}
           </h3>
           <div className="guide__rows">
-            <div className="guide__row"><span>📅</span><span>{zh?'每隔':'Every'} <strong>{guide.freqHours}h</strong> · <strong>{guide.freqPerDay}×</strong>/day</span></div>
-            <div className="guide__row"><span>🍼</span><span>{zh?'奶瓶':'Bottle'}: <strong>{guide.bottleMl}ml</strong></span></div>
-            <div className="guide__row"><span>🤱</span><span>{zh?'母乳':'Breast'}: <strong>{guide.breastMin} {zh?'分鐘':'min'}</strong></span></div>
-            {guide.sleepWake&&<div className="guide__row"><span>💤</span><span>{zh?`超過${guide.sleepWake}小時需叫醒餵食`:`Wake to feed if >${guide.sleepWake}h sleep`}</span></div>}
+            <div className="guide__row">
+              <span>📅</span>
+              <span>
+                {zh ? "每隔" : "Every"} <strong>{guide.freqHours}h</strong> ·{" "}
+                <strong>{guide.freqPerDay}×</strong>/day
+              </span>
+            </div>
+            <div className="guide__row">
+              <span>🍼</span>
+              <span>
+                {zh ? "奶瓶" : "Bottle"}: <strong>{guide.bottleMl}ml</strong>
+              </span>
+            </div>
+            <div className="guide__row">
+              <span>🤱</span>
+              <span>
+                {zh ? "母乳" : "Breast"}:{" "}
+                <strong>
+                  {guide.breastMin} {zh ? "分鐘" : "min"}
+                </strong>
+              </span>
+            </div>
+            {guide.sleepWake && (
+              <div className="guide__row">
+                <span>💤</span>
+                <span>
+                  {zh
+                    ? `超過${guide.sleepWake}小時需叫醒餵食`
+                    : `Wake to feed if >${guide.sleepWake}h sleep`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
