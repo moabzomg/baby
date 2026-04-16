@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ACTIONS, ACTION_GROUPS, MOOD_OPTIONS, FEED_ACTIONS, DIAPER_ACTIONS } from "../utils/actions";
+import { ACTIONS, ACTION_GROUPS, MOOD_OPTIONS, FEED_ACTIONS, NAPPY_ACTIONS } from "../utils/actions";
 import { fmtTime, isSameDay, getBabyAgeWeeks, fmtAgeWeeks, getGuide,
          getSleepIssues, computeSleepDurations, getTempSteps, tempStatus,
          getWeightSteps, getHeightSteps } from "../utils/helpers";
@@ -195,7 +195,7 @@ export default function BabyLog({ t, lang, baby, entries, addEntry, deleteEntry 
 
   const todayFeeds   = todayEntries.filter(e=>FEED_ACTIONS.includes(e.type));
   const todayMl      = todayFeeds.reduce((s,e)=>s+(e.amountMl||0), 0);
-  const todayDiapers = todayEntries.filter(e=>DIAPER_ACTIONS.includes(e.type)).length;
+  const todayDiapers = todayEntries.filter(e=>NAPPY_ACTIONS.includes(e.type)).length;
   const sleepPairs   = (() => {
     let lastSleep=null, total=0;
     for (const e of todayEntries) {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ACTIONS, DIAPER_ACTIONS, FEED_ACTIONS } from "../utils/actions";
+import { ACTIONS, NAPPY_ACTIONS, FEED_ACTIONS } from "../utils/actions";
 import { fmtTime, isSameDay, getSleepIssues } from "../utils/helpers";
 import { MONTH_NAMES, DAY_NAMES } from "../i18n/translations";
 
@@ -76,7 +76,7 @@ export default function Diary({ t, lang, entries, deleteEntry }) {
   const todayFeeds = dayEntries.filter((e) => FEED_ACTIONS.includes(e.type));
   const todayMl = todayFeeds.reduce((s, e) => s + (e.amountMl || 0), 0);
   const todayDiapers = dayEntries.filter((e) =>
-    DIAPER_ACTIONS.includes(e.type),
+    NAPPY_ACTIONS.includes(e.type),
   ).length;
   const sleepSecs = Object.values(sleepDurations).reduce((a, b) => a + b, 0);
 
