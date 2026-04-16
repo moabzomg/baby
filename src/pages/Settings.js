@@ -356,7 +356,7 @@ export default function Settings({
             }}
             onPointerUp={() => {
               if (entries?.length) {
-                const txt = exportToFormattedText(entries);
+                const txt = exportToFormattedText(entries, lang);
                 const blob = new Blob([txt], { type: "text/plain" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -373,7 +373,7 @@ export default function Settings({
 
         <div
           style={{
-            borderTop: "1px solid var(--border-color)",
+            borderTop: "1px solid var(--border)",
             margin: "20px 0",
           }}
         ></div>
@@ -417,8 +417,8 @@ export default function Settings({
             fontSize: 13,
             padding: "8px",
             borderRadius: "8px",
-            border: "1px solid var(--border-color)",
-            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            background: "var(--bg)",
             color: "var(--text-primary)",
             fontFamily: "monospace",
           }}
