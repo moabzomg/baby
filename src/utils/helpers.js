@@ -1,4 +1,4 @@
-import { ACTIONS, FEED_ACTIONS, SLEEP_ACTIONS, NAPPY_ACTIONS } from './actions';
+import { ACTIONS, SLEEP_ACTIONS } from './actions';
 
 export function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -331,73 +331,134 @@ export function importFromCSV(csvStr) {
   }
 }
 
-// ── Import from formatted text (plain log / PiyoLog style) ───────────────
+// ── Import from PiyoLog / formatted text ─────────────────────────────────
+// Supports the full PiyoLog export format including all action types
 export function importFromFormattedText(text) {
-  // Simple parser: look for lines like "HH:MM  ActionLabel  detail"
-  // This is a best-effort parser — exact format varies
   try {
     const lines = text.trim().split('\n');
     const entries = [];
     let currentDate = null;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line || line.startsWith('---') || line.startsWith('Total')) continue;
+    // PiyoLog label → internal action type
+    const LABEL_MAP = {
+      'sleep': 'sleep', '睡覺': 'sleep',
+      'wake-up': 'wake', 'wake up': 'wake', '醒來': 'wake',
+      'breastfeeding': 'breastfeed', 'breast feeding': 'breastfeed', '母乳': 'breastfeed',
+      'formula': 'formula', '配方奶': 'formula',
+      'expressed breast milk': 'ebm', 'ebm': 'ebm', '母乳儲存': 'ebm',
+      'pumping': 'pumping', '泵奶': 'pumping',
+      'bottle': 'bottle', '奶瓶': 'bottle',
+      'solid food': 'solid', 'solid': 'solid', '固體食物': 'solid',
+      'snack': 'snack', '小食': 'snack',
+      'meal': 'meal', '正餐': 'meal',
+      'drink': 'drink', '飲品': 'drink',
+      'pee': 'wet', '小便': 'wet',
+      'poop': 'soiled', '大便': 'soiled',
+      'pee+poop': 'mixed', '大小便': 'mixed',
+      'change': 'change', '換尿片': 'change',
+      'weight': 'weight', '體重': 'weight',
+      'height': 'height', '身高': 'height',
+      'head size': 'head', '頭圍': 'head',
+      'chest size': 'chest', '胸圍': 'chest',
+      'body temp': 'temp', 'body temperature': 'temp', '體溫': 'temp',
+      'cough': 'cough', '咳嗽': 'cough',
+      'vomit': 'vomit', '嘔吐': 'vomit',
+      'rash': 'rash', '皮疹': 'rash',
+      'injury': 'injury', '受傷': 'injury',
+      'hospital': 'hospital', '求診': 'hospital',
+      'vaccine': 'vaccine', '疫苗': 'vaccine',
+      'medicine': 'medicine', '藥物': 'medicine',
+      'walks': 'walk', 'walk': 'walk', '散步': 'walk',
+      'baths': 'bath', 'bath': 'bath', '洗澡': 'bath',
+      'tummy time': 'tummy', '趴趴時間': 'tummy',
+      'milestone': 'milestone', '里程碑': 'milestone',
+    };
 
-      // Date header: "Mon, Apr 14, 2026" or "2026-04-14"
-      const isoDate = line.match(/^(\d{4}-\d{2}-\d{2})$/);
-      const verboseDate = line.match(/\b(\w{3,},?\s+\w{3,}\s+\d{1,2},?\s+\d{4})\b/);
-      if (isoDate) { currentDate = new Date(isoDate[1]); continue; }
-      if (verboseDate) {
-        const parsed = new Date(verboseDate[1].replace(',',''));
+    function resolveType(label) {
+      const l = label.toLowerCase().trim();
+      // Exact match first
+      if (LABEL_MAP[l]) return LABEL_MAP[l];
+      // Partial match
+      for (const [k, v] of Object.entries(LABEL_MAP)) {
+        if (l.startsWith(k) || l.includes(k)) return v;
+      }
+      return 'note';
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      const line = raw.trim();
+
+      // Skip blank, separators, totals, PiyoLog header
+      if (!line || line.startsWith('---') || line.startsWith('[Piyo') ||
+          line.startsWith('Total') || line.startsWith('Had formula') ||
+          line.startsWith('Expressed breast') || line.startsWith('Pee ') ||
+          line.startsWith('Poop ')) continue;
+
+      // Date header patterns:
+      // "Mon, Apr 13, 2026"  /  "Mon, Apr 13, 2026\nhh (0 mo 12 d)"
+      const dateMatch = line.match(/^(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat),?\s+(\w+\s+\d+,?\s+\d{4})/i)
+        || line.match(/^(\d{4}-\d{2}-\d{2})$/);
+      if (dateMatch) {
+        const parsed = new Date(dateMatch[1].replace(',',''));
         if (!isNaN(parsed.getTime())) { currentDate = parsed; continue; }
       }
+      // Also handle "Apr 2026" month header
+      if (line.match(/^\w+\s+\d{4}$/)) continue;
+      // Skip "hh (0 mo X d)" lines
+      if (line.match(/^hh\s*\(/)) continue;
       if (!currentDate) continue;
 
-      // Entry line: "HH:MM   Label  detail  (!)?"
-      const entryMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+)/);
+      // Entry line: "HH:MM   Label  detail"
+      const entryMatch = line.match(/^(\d{1,2}):(\d{2})\s+(.+)/);
       if (!entryMatch) continue;
-      const [, timeStr, rest] = entryMatch;
-      const [hh, mm] = timeStr.split(':').map(Number);
-      const ts = new Date(currentDate);
-      ts.setHours(hh, mm, 0, 0);
 
-      // Try to match type from rest
-      const hasWarn = rest.includes('(!)');
+      const [, hh, mm, rest] = entryMatch;
       const clean = rest.replace(/\s*\(!?\)\s*/g, '').trim();
 
-      // ml
-      const mlMatch = clean.match(/(\d+)\s*ml/i);
-      const amountMl = mlMatch ? parseInt(mlMatch[1]) : null;
+      const ts = new Date(currentDate);
+      ts.setHours(parseInt(hh), parseInt(mm), 0, 0);
 
-      // bf L/R minutes
-      const bfLMatch = clean.match(/L\s*(\d+)m/i);
-      const bfRMatch = clean.match(/R\s*(\d+)m/i);
+      // Parse amounts: "50ml", "37.2°C", "50.0cm", "5.00kg"
+      const mlMatch    = clean.match(/(\d+(?:\.\d+)?)\s*ml/i);
+      const tempMatch  = clean.match(/(\d+(?:\.\d+)?)\s*°?C/i);
+      const cmMatch    = clean.match(/(\d+(?:\.\d+)?)\s*cm/i);
+      const kgMatch    = clean.match(/(\d+(?:\.\d+)?)\s*kg/i);
+      const gMatch     = clean.match(/(\d+(?:\.\d+)?)\s*g(?!\w)/i);
+      const bfLMatch   = clean.match(/L\s*(\d+)m/i);
+      const bfRMatch   = clean.match(/R\s*(\d+)m/i);
 
-      // Guess type from label
-      const lower = clean.toLowerCase();
-      let type = 'note';
-      if (lower.includes('sleep') || lower.includes('睡')) type = 'sleep';
-      else if (lower.includes('wake') || lower.includes('醒')) type = 'wake';
-      else if (lower.includes('breast') || lower.includes('母乳') || lower.includes('bf')) type = 'breastfeed';
-      else if (lower.includes('formula') || lower.includes('配方')) type = 'formula';
-      else if (lower.includes('pee') || lower.includes('小便')) type = 'pee';
-      else if (lower.includes('poo') || lower.includes('大便')) type = 'poo';
-      else if (lower.includes('weight') || lower.includes('體重')) type = 'weight';
-      else if (lower.includes('height') || lower.includes('身高')) type = 'height';
-      else if (lower.includes('temp') || lower.includes('體溫')) type = 'temp';
+      // Strip value from label to identify action
+      const labelOnly = clean
+        .replace(/(\d+(?:\.\d+)?\s*(?:ml|°?C|cm|kg|g(?!\w)))/gi, '')
+        .replace(/L\s*\d+m\s*\/\s*R\s*\d+m/i, '')
+        .replace(/L\s*\d+m/i, '')
+        .replace(/R\s*\d+m/i, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+      const type = resolveType(labelOnly);
+
+      let valueNum = null;
+      if (tempMatch)   valueNum = parseFloat(tempMatch[1]);
+      else if (cmMatch) valueNum = parseFloat(cmMatch[1]);
+      else if (kgMatch) valueNum = parseFloat(kgMatch[1]) * 1000; // store as grams
+      else if (gMatch)  valueNum = parseFloat(gMatch[1]);
 
       entries.push({
         id: ts.getTime() + Math.random(),
         timestamp: ts.getTime(),
         type,
-        amountMl,
+        amountMl: mlMatch ? parseFloat(mlMatch[1]) : null,
+        valueNum,
         breastL: bfLMatch ? parseInt(bfLMatch[1]) : null,
         breastR: bfRMatch ? parseInt(bfRMatch[1]) : null,
-        valueNum: null,
+        bfSides: (bfLMatch || bfRMatch) ? [bfLMatch?'L':null, bfRMatch?'R':null].filter(Boolean) : [],
         note: '',
+        mood: null,
       });
     }
+
     return { entries };
   } catch (err) {
     return { error: true, line: 0, content: '', reason: err.message };
