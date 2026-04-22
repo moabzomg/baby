@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
-import { load, save, fmtDateKey } from "../utils/helpers";
+
 
 // ── Storage helpers ───────────────────────────────────────────────────────
 function loadJournal() {

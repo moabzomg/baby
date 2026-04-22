@@ -38,28 +38,8 @@ function whoInterp(table, ageM) {
   return table[lo].map((v,i)=>v+t*(table[hi][i]-v));
 }
 
-// ── Period helpers ────────────────────────────────────────────────────────
-// Returns { start: Date, end: Date, label: string, keys: string[] }
-function getPeriodKeys(anchor, range) {
-  const end = new Date(anchor); end.setHours(23,59,59,999);
-  const start = new Date(anchor);
-  let n;
-  if (range==='7')   { n=7;   start.setDate(end.getDate()-6); }
-  if (range==='30')  { n=30;  start.setDate(end.getDate()-29); }
-  if (range==='180') { n=180; start.setDate(end.getDate()-179); }
-  if (range==='365') { n=365; start.setDate(end.getDate()-364); }
-  if (range==='custom') return null; // handled separately
-  const keys=[];
-  const d=new Date(start);
-  while (d<=end) { keys.push(fmtDateKey(d.getTime())); d.setDate(d.getDate()+1); }
-  return keys;
-}
-
-function shortLbl(k, range) {
-  const [y,m,d]=k.split('-');
-  if (range==='7') return `${parseInt(m)}/${parseInt(d)}`;
-  if (range==='30') return `${parseInt(m)}/${parseInt(d)}`;
-  // For longer ranges, group by week/month
+function shortLbl(k) {
+  const [,m,d]=k.split('-');
   return `${parseInt(m)}/${parseInt(d)}`;
 }
 
@@ -67,12 +47,10 @@ function shortLbl(k, range) {
 // Each day has a vertical position for each series, normalised independently
 // Series are displayed as thin vertical strips side by side within each day column
 function MultiSeriesChart({ series, keys, range }) {
-  if (!keys || keys.length === 0) return null;
-
   // For 180/365 day ranges, bucket into weeks or months
   const buckets = useMemo(() => {
-    if (keys.length <= 35) return keys.map(k=>({ label: shortLbl(k, range), keys:[k] }));
-    // Group by week
+    if (!keys || keys.length === 0) return [];
+    if (keys.length <= 35) return keys.map(k=>({ label: shortLbl(k), keys:[k] }));
     const groups = [];
     for (let i=0; i<keys.length; i+=7) {
       const chunk = keys.slice(i, i+7);
@@ -81,6 +59,7 @@ function MultiSeriesChart({ series, keys, range }) {
     }
     return groups;
   }, [keys, range]);
+  if (!keys || keys.length === 0) return null;
 
   const H=120, padT=8, padB=18, padL=8, padR=4;
 
@@ -375,7 +354,8 @@ function PeriodNav({ range, setRange, anchor, setAnchor, customStart, customEnd,
     a.setDate(a.getDate()+dir*days);
     if (a>new Date()) a.setTime(new Date().getTime());
     setAnchor(fmtDateKey(a.getTime()));
-  },[anchor, range]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[anchor, range, setAnchor]);
 
   const isToday=anchor===fmtDateKey(Date.now());
 
