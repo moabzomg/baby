@@ -9,6 +9,7 @@ import Analysis from "./pages/Analysis";
 import LaborTracker from "./pages/LaborTracker";
 import Settings from "./pages/Settings";
 import Journal from "./pages/Journal";
+import BabyGuide from "./pages/BabyGuide";
 import "./App.css";
 
 export default function App() {
@@ -16,7 +17,7 @@ export default function App() {
   const [baby,  setBabyState]  = useState(() => load("bd_baby",  null));
   const [theme, setThemeState] = useState(() => load("bd_theme", "light"));
   const [tab,   setTab]        = useState("log");
-  const { entries, setEntries, addEntry, deleteEntry, clearAll } = useEntries();
+  const { entries, addEntry, deleteEntry, clearAll } = useEntries();
 
   const t = TRANSLATIONS[lang];
 
@@ -24,8 +25,9 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  const setLang  = (l) => { setLangState(l);  save("bd_lang",  l); };
-  const setBaby  = (b) => { setBabyState(b);  save("bd_baby",  b); };
+  const setLang = (l) => { setLangState(l); save("bd_lang", l); };
+  const setBaby = (b) => { setBabyState(b); save("bd_baby", b); };
+
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
     setThemeState(next);
@@ -54,10 +56,12 @@ export default function App() {
         { id: "diary",    label: lang === "zh" ? "日記" : "Diary",    emoji: "📅" },
         { id: "journal",  label: lang === "zh" ? "日誌" : "Journal",  emoji: "📖" },
         { id: "analysis", label: lang === "zh" ? "分析" : "Analysis", emoji: "📊" },
+        { id: "guide",    label: lang === "zh" ? "指南" : "Guide",    emoji: "💡" },
         { id: "settings", label: lang === "zh" ? "設定" : "Settings", emoji: "⚙️" },
       ]
     : [
         { id: "labor",    label: lang === "zh" ? "陣痛" : "Labor",    emoji: "⏱"  },
+        { id: "guide",    label: lang === "zh" ? "指南" : "Guide",    emoji: "💡" },
         { id: "settings", label: lang === "zh" ? "設定" : "Settings", emoji: "⚙️" },
       ];
 
@@ -66,10 +70,11 @@ export default function App() {
 
   return (
     <div className="shell">
+      {/* Header */}
       <header className="app-header">
         <span className="app-header-title">
           {baby.name
-            ? lang === "zh" ? `${baby.name}的日記` : `${baby.name}'s diary`
+            ? (lang === "zh" ? `${baby.name}的日記` : `${baby.name}'s diary`)
             : t.appName}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -83,24 +88,26 @@ export default function App() {
         </div>
       </header>
 
+      {/* Pages */}
       <main className="app-main">
         {activeTab === "log"      && baby.hasBorn  && <BabyLog    t={t} lang={lang} baby={baby} entries={entries} addEntry={addEntry} deleteEntry={deleteEntry} />}
         {activeTab === "diary"    && baby.hasBorn  && <Diary      t={t} lang={lang} entries={entries} deleteEntry={deleteEntry} />}
         {activeTab === "journal"  && baby.hasBorn  && <Journal    lang={lang} />}
         {activeTab === "analysis" && baby.hasBorn  && <Analysis   lang={lang} entries={entries} baby={baby} />}
+        {activeTab === "guide"                     && <BabyGuide  lang={lang} baby={baby} />}
         {activeTab === "labor"    && !baby.hasBorn && <LaborTracker t={t} />}
         {activeTab === "settings" && (
           <Settings
             t={t} lang={lang} setLang={setLang}
             baby={baby}
             entries={entries}
-            setEntries={setEntries}
             setBaby={(b) => { setBaby(b); setTab(b.hasBorn ? "log" : "labor"); }}
             resetAll={resetAll}
           />
         )}
       </main>
 
+      {/* Bottom nav */}
       <nav className="bottom-nav">
         {NAV.map((n) => (
           <button key={n.id}

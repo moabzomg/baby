@@ -1,24 +1,29 @@
 import React, { useState, useRef, useCallback } from "react";
 
-
-// ── Storage helpers ───────────────────────────────────────────────────────
+// ── Storage ───────────────────────────────────────────────────────────────
 function loadJournal() {
-  try { return JSON.parse(localStorage.getItem('bd_journal') || '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem("bd_journal") || "[]"); } catch { return []; }
 }
-function saveJournal(entries) {
-  try { localStorage.setItem('bd_journal', JSON.stringify(entries)); } catch {}
+function saveJournal(data) {
+  try { localStorage.setItem("bd_journal", JSON.stringify(data)); } catch {}
+}
+
+// ── Export journal to JSON file ───────────────────────────────────────────
+function exportJournal(entries) {
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), entries }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "journal.json"; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Photo thumbnail ───────────────────────────────────────────────────────
 function PhotoThumb({ src, onRemove, onClick }) {
   return (
-    <div style={{position:'relative',display:'inline-block',cursor:'pointer'}} onPointerUp={onClick}>
-      <img src={src} alt="" style={{width:72,height:72,objectFit:'cover',borderRadius:8,border:'1px solid var(--border)',display:'block'}}/>
+    <div style={{ position: "relative", display: "inline-block", cursor: "pointer" }} onPointerUp={onClick}>
+      <img src={src} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)", display: "block" }} />
       {onRemove && (
-        <button onPointerUp={e=>{e.stopPropagation();onRemove();}}
-          style={{position:'absolute',top:2,right:2,width:18,height:18,borderRadius:'50%',background:'rgba(0,0,0,0.6)',
-            color:'#fff',fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',
-            border:'none',cursor:'pointer',lineHeight:1}}>
+        <button onPointerUp={e => { e.stopPropagation(); onRemove(); }}
+          style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           ✕
         </button>
       )}
@@ -30,309 +35,321 @@ function PhotoThumb({ src, onRemove, onClick }) {
 function Lightbox({ photos, idx, onClose }) {
   const [cur, setCur] = useState(idx);
   return (
-    <div onPointerUp={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',
-      zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div onPointerUp={e=>e.stopPropagation()} style={{position:'relative',maxWidth:'92vw',maxHeight:'88vh'}}>
-        <img src={photos[cur]} alt="" style={{maxWidth:'90vw',maxHeight:'80vh',borderRadius:8,objectFit:'contain',display:'block'}}/>
-        {photos.length>1&&(
-          <div style={{display:'flex',justifyContent:'space-between',marginTop:10}}>
-            <button onPointerUp={()=>setCur(c=>(c-1+photos.length)%photos.length)}
-              style={{background:'rgba(255,255,255,0.15)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:18,cursor:'pointer'}}>‹</button>
-            <span style={{color:'rgba(255,255,255,.6)',fontSize:12,alignSelf:'center'}}>{cur+1}/{photos.length}</span>
-            <button onPointerUp={()=>setCur(c=>(c+1)%photos.length)}
-              style={{background:'rgba(255,255,255,0.15)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:18,cursor:'pointer'}}>›</button>
+    <div onPointerUp={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div onPointerUp={e => e.stopPropagation()} style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh" }}>
+        <img src={photos[cur]} alt="" style={{ maxWidth: "90vw", maxHeight: "80vh", borderRadius: 8, objectFit: "contain", display: "block" }} />
+        {photos.length > 1 && (
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
+            <button onPointerUp={() => setCur(c => (c - 1 + photos.length) % photos.length)}
+              style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 18, cursor: "pointer" }}>‹</button>
+            <span style={{ color: "rgba(255,255,255,.6)", fontSize: 12 }}>{cur + 1} / {photos.length}</span>
+            <button onPointerUp={() => setCur(c => (c + 1) % photos.length)}
+              style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 18, cursor: "pointer" }}>›</button>
           </div>
         )}
-        <button onPointerUp={onClose} style={{position:'absolute',top:-14,right:-14,width:28,height:28,
-          borderRadius:'50%',background:'rgba(255,255,255,0.15)',color:'#fff',border:'none',fontSize:16,cursor:'pointer'}}>✕</button>
+        <button onPointerUp={onClose} style={{ position: "absolute", top: -14, right: -14, width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", fontSize: 16, cursor: "pointer" }}>✕</button>
       </div>
     </div>
   );
 }
 
-// ── Journal entry card ────────────────────────────────────────────────────
+// ── Journal card ──────────────────────────────────────────────────────────
+const MOOD_MAP = { happy: "😄", neutral: "😐", fussy: "😣", crying: "😢" };
+
 function JournalCard({ entry, lang, onDelete, onEdit }) {
-  const zh=lang==='zh';
-  const [lightboxIdx, setLightboxIdx]=useState(null);
-  const date=new Date(entry.timestamp);
-  const dateStr=date.toLocaleDateString(zh?'zh-HK':'en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
-  const timeStr=date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  const MOOD_MAP={happy:'😄',neutral:'😐',fussy:'😣',crying:'😢'};
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+  const zh = lang === "zh";
+  const date = new Date(entry.timestamp);
+  const dateStr = date.toLocaleDateString(zh ? "zh-HK" : "en-GB", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+  const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="journal-card">
       <div className="journal-card-header">
         <div>
           <span className="journal-date">{dateStr}</span>
-          <span className="journal-time">{timeStr}</span>
+          <span className="journal-time"> {timeStr}</span>
         </div>
-        <div style={{display:'flex',gap:6}}>
+        <div style={{ display: "flex", gap: 6 }}>
           <button className="journal-action-btn" onPointerUp={onEdit}>✏️</button>
           <button className="journal-action-btn journal-action-btn--del" onPointerUp={onDelete}>🗑</button>
         </div>
       </div>
-
-      {entry.mood && (
-        <div style={{fontSize:22,marginBottom:6}}>{MOOD_MAP[entry.mood]||''}</div>
-      )}
-
-      {entry.title && (
-        <div className="journal-title">{entry.title}</div>
-      )}
-
-      {entry.text && (
-        <div className="journal-text">{entry.text}</div>
-      )}
-
-      {entry.tags?.length>0 && (
-        <div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:8}}>
-          {entry.tags.map(tag=>(
-            <span key={tag} style={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-pill)',
-              padding:'2px 8px',fontSize:11,color:'var(--text-secondary)'}}>#{tag}</span>
+      {entry.mood && <div style={{ fontSize: 22, marginBottom: 6 }}>{MOOD_MAP[entry.mood] || ""}</div>}
+      {entry.title && <div className="journal-title">{entry.title}</div>}
+      {entry.text  && <div className="journal-text">{entry.text}</div>}
+      {entry.tags?.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 }}>
+          {entry.tags.map(tag => (
+            <span key={tag} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-pill)", padding: "2px 8px", fontSize: 11, color: "var(--text-secondary)" }}>#{tag}</span>
           ))}
         </div>
       )}
-
-      {entry.photos?.length>0 && (
-        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:10}}>
-          {entry.photos.map((src,i)=>(
-            <PhotoThumb key={i} src={src} onClick={()=>setLightboxIdx(i)}/>
+      {entry.googleDriveLink && (
+        <a href={entry.googleDriveLink} target="_blank" rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12, color: "#1a73e8", textDecoration: "none" }}>
+          🔗 {zh ? "Google Drive 相片" : "Google Drive photos"}
+        </a>
+      )}
+      {entry.photos?.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+          {entry.photos.map((src, i) => (
+            <PhotoThumb key={i} src={src} onClick={() => setLightboxIdx(i)} />
           ))}
         </div>
       )}
-
-      {lightboxIdx!==null && (
-        <Lightbox photos={entry.photos} idx={lightboxIdx} onClose={()=>setLightboxIdx(null)}/>
+      {lightboxIdx !== null && (
+        <Lightbox photos={entry.photos} idx={lightboxIdx} onClose={() => setLightboxIdx(null)} />
       )}
     </div>
   );
 }
 
-// ── Entry editor ──────────────────────────────────────────────────────────
-const MOOD_OPTIONS=[
-  {id:'happy',emoji:'😄'},{id:'neutral',emoji:'😐'},{id:'fussy',emoji:'😣'},{id:'crying',emoji:'😢'},
+// ── Editor ────────────────────────────────────────────────────────────────
+const MOOD_OPTIONS = [
+  { id: "happy", emoji: "😄" }, { id: "neutral", emoji: "😐" },
+  { id: "fussy", emoji: "😣" }, { id: "crying",  emoji: "😢" },
 ];
 
 function EntryEditor({ initial, lang, onSave, onCancel }) {
-  const zh=lang==='zh';
-  const [title, setTitle]=useState(initial?.title||'');
-  const [text, setText]=useState(initial?.text||'');
-  const [mood, setMood]=useState(initial?.mood||'');
-  const [tags, setTags]=useState((initial?.tags||[]).join(', '));
-  const [photos, setPhotos]=useState(initial?.photos||[]);
-  const [timestamp, setTimestamp]=useState(
-    initial?.timestamp ? new Date(initial.timestamp).toISOString().slice(0,16) : new Date().toISOString().slice(0,16)
+  const zh = lang === "zh";
+  const [title,     setTitle]     = useState(initial?.title || "");
+  const [text,      setText]      = useState(initial?.text  || "");
+  const [mood,      setMood]      = useState(initial?.mood  || "");
+  const [tags,      setTags]      = useState((initial?.tags || []).join(", "));
+  const [photos,    setPhotos]    = useState(initial?.photos || []);
+  const [driveLink, setDriveLink] = useState(initial?.googleDriveLink || "");
+  const [timestamp, setTimestamp] = useState(
+    initial?.timestamp
+      ? new Date(initial.timestamp).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16)
   );
-  const fileRef=useRef();
+  const fileRef = useRef();
 
-  const handlePhotos=useCallback((files)=>{
-    Array.from(files).forEach(file=>{
-      if (!file.type.startsWith('image/')) return;
-      const reader=new FileReader();
-      reader.onload=e=>setPhotos(prev=>[...prev,e.target.result]);
+  const handlePhotos = useCallback((files) => {
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = e => setPhotos(prev => [...prev, e.target.result]);
       reader.readAsDataURL(file);
     });
-  },[]);
+  }, []);
 
-  const handleDrop=useCallback(e=>{
-    e.preventDefault();
-    handlePhotos(e.dataTransfer.files);
-  },[handlePhotos]);
-
-  const parsedTags=tags.split(',').map(t=>t.trim()).filter(Boolean);
-
-  const submit=()=>{
-    if (!text.trim()&&!title.trim()&&!photos.length) return;
+  const submit = () => {
+    if (!text.trim() && !title.trim() && !photos.length && !driveLink.trim()) return;
     onSave({
-      title:title.trim(),
-      text:text.trim(),
+      title: title.trim(),
+      text:  text.trim(),
       mood,
-      tags:parsedTags,
+      tags:  tags.split(",").map(t => t.trim()).filter(Boolean),
       photos,
-      timestamp:new Date(timestamp).getTime(),
+      googleDriveLink: driveLink.trim(),
+      timestamp: new Date(timestamp).getTime(),
     });
   };
 
   return (
     <div className="journal-editor">
       <div className="journal-editor-header">
-        <span style={{fontSize:15,fontWeight:600,color:'var(--text-primary)'}}>
-          {initial ? (zh?'編輯日記':'Edit entry') : (zh?'新日記':'New entry')}
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>
+          {initial ? (zh ? "編輯日記" : "Edit entry") : (zh ? "新日記" : "New entry")}
         </span>
-        <button onPointerUp={onCancel} style={{color:'var(--text-tertiary)',fontSize:16,background:'none',border:'none',cursor:'pointer'}}>✕</button>
+        <button onPointerUp={onCancel} style={{ color: "var(--text-tertiary)", fontSize: 16, background: "none", border: "none", cursor: "pointer" }}>✕</button>
       </div>
 
       {/* Date/time */}
-      <div className="field-group" style={{marginBottom:10}}>
-        <label className="field-label">{zh?'日期時間':'Date & time'}</label>
+      <div className="field-group" style={{ marginBottom: 10 }}>
+        <label className="field-label">{zh ? "日期時間" : "Date & time"}</label>
         <input type="datetime-local" className="field-input" value={timestamp}
-          max={new Date().toISOString().slice(0,16)}
-          onChange={e=>setTimestamp(e.target.value)}/>
+          max={new Date().toISOString().slice(0, 16)} onChange={e => setTimestamp(e.target.value)} />
       </div>
 
       {/* Mood */}
-      <div style={{display:'flex',gap:8,marginBottom:10}}>
-        {MOOD_OPTIONS.map(m=>(
-          <button key={m.id} onPointerUp={()=>setMood(prev=>prev===m.id?'':m.id)}
-            style={{fontSize:24,background:'none',border:'none',cursor:'pointer',
-              opacity:mood===m.id?1:0.35,transform:mood===m.id?'scale(1.2)':'scale(1)',
-              transition:'all .15s'}}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {MOOD_OPTIONS.map(m => (
+          <button key={m.id} onPointerUp={() => setMood(prev => prev === m.id ? "" : m.id)}
+            style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", opacity: mood === m.id ? 1 : 0.35, transform: mood === m.id ? "scale(1.2)" : "scale(1)", transition: "all .15s" }}>
             {m.emoji}
           </button>
         ))}
       </div>
 
       {/* Title */}
-      <div className="field-group" style={{marginBottom:10}}>
-        <label className="field-label">{zh?'標題（可選）':'Title (optional)'}</label>
-        <input type="text" className="field-input" placeholder={zh?'今天的主題…':'Title for this entry…'}
-          value={title} onChange={e=>setTitle(e.target.value)} maxLength={80}/>
+      <div className="field-group" style={{ marginBottom: 10 }}>
+        <label className="field-label">{zh ? "標題（可選）" : "Title (optional)"}</label>
+        <input type="text" className="field-input" placeholder={zh ? "今天的主題…" : "Title…"}
+          value={title} onChange={e => setTitle(e.target.value)} maxLength={80} />
       </div>
 
       {/* Text */}
-      <div className="field-group" style={{marginBottom:10}}>
-        <label className="field-label">{zh?'內容':'Content'}</label>
+      <div className="field-group" style={{ marginBottom: 10 }}>
+        <label className="field-label">{zh ? "內容" : "Content"}</label>
         <textarea className="field-input" rows={5}
-          placeholder={zh?'今天發生了什麼…':'What happened today…'}
-          value={text} onChange={e=>setText(e.target.value)}
-          style={{resize:'vertical',lineHeight:1.6}}/>
+          placeholder={zh ? "今天發生了什麼…" : "What happened today…"}
+          value={text} onChange={e => setText(e.target.value)} style={{ resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
       {/* Tags */}
-      <div className="field-group" style={{marginBottom:10}}>
-        <label className="field-label">{zh?'標籤（用逗號分隔）':'Tags (comma separated)'}</label>
-        <input type="text" className="field-input" placeholder={zh?'例：第一次、里程碑':'e.g. milestone, first-time'}
-          value={tags} onChange={e=>setTags(e.target.value)}/>
+      <div className="field-group" style={{ marginBottom: 10 }}>
+        <label className="field-label">{zh ? "標籤（逗號分隔）" : "Tags (comma separated)"}</label>
+        <input type="text" className="field-input" placeholder={zh ? "例：里程碑、第一次" : "e.g. milestone, first-time"}
+          value={tags} onChange={e => setTags(e.target.value)} />
+      </div>
+
+      {/* Google Drive link */}
+      <div className="field-group" style={{ marginBottom: 10 }}>
+        <label className="field-label">{zh ? "Google Drive 相片連結（可選）" : "Google Drive photo link (optional)"}</label>
+        <input type="url" className="field-input" placeholder="https://drive.google.com/…"
+          value={driveLink} onChange={e => setDriveLink(e.target.value)} />
+        <span style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 2, display: "block" }}>
+          {zh ? "適合存放大量相片或影片" : "Ideal for large photo/video collections"}
+        </span>
       </div>
 
       {/* Photo upload */}
-      <div className="field-group" style={{marginBottom:12}}>
-        <label className="field-label">{zh?'相片':'Photos'}</label>
+      <div className="field-group" style={{ marginBottom: 12 }}>
+        <label className="field-label">{zh ? "相片（本地上傳）" : "Photos (local upload)"}</label>
         <div className="photo-drop-zone"
-          onDrop={handleDrop}
-          onDragOver={e=>e.preventDefault()}
-          onPointerUp={()=>fileRef.current?.click()}>
-          {zh?'點擊或拖放相片':'Tap or drop photos here'}
-          <input ref={fileRef} type="file" accept="image/*" multiple style={{display:'none'}}
-            onChange={e=>handlePhotos(e.target.files)}/>
+          onDrop={e => { e.preventDefault(); handlePhotos(e.dataTransfer.files); }}
+          onDragOver={e => e.preventDefault()}
+          onPointerUp={() => fileRef.current?.click()}>
+          {zh ? "點擊或拖放相片" : "Tap or drop photos here"}
+          <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+            onChange={e => handlePhotos(e.target.files)} />
         </div>
-        {photos.length>0 && (
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-            {photos.map((src,i)=>(
-              <PhotoThumb key={i} src={src} onRemove={()=>setPhotos(prev=>prev.filter((_,j)=>j!==i))}/>
+        {photos.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            {photos.map((src, i) => (
+              <PhotoThumb key={i} src={src} onRemove={() => setPhotos(prev => prev.filter((_, j) => j !== i))} />
             ))}
           </div>
         )}
       </div>
 
-      <div style={{display:'flex',gap:8}}>
-        <button className="btn-secondary" onPointerUp={onCancel} style={{flex:1}}>{zh?'取消':'Cancel'}</button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn-secondary" onPointerUp={onCancel} style={{ flex: 1 }}>{zh ? "取消" : "Cancel"}</button>
         <button onPointerUp={submit}
-          style={{flex:2,padding:'12px',borderRadius:'var(--radius-sm)',background:'var(--accent)',
-            color:'var(--bg)',fontSize:15,fontWeight:600,border:'none',cursor:'pointer',touchAction:'manipulation'}}>
-          {zh?'儲存':'Save'}
+          style={{ flex: 2, padding: "12px", borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "var(--bg)", fontSize: 15, fontWeight: 600, border: "none", cursor: "pointer", touchAction: "manipulation" }}>
+          {zh ? "儲存" : "Save"}
         </button>
       </div>
     </div>
   );
 }
 
-// ── Main Journal page ─────────────────────────────────────────────────────
+// ── Main Journal ──────────────────────────────────────────────────────────
 export default function Journal({ lang }) {
-  const zh=lang==='zh';
-  const [entries, setEntries]=useState(loadJournal);
-  const [editing, setEditing]=useState(null); // null | 'new' | entry-id
-  const [search, setSearch]=useState('');
-  const [filterTag, setFilterTag]=useState('');
-  const [albumMode, setAlbumMode]=useState(false);
+  const zh = lang === "zh";
+  const [entries,    setEntries]   = useState(loadJournal);
+  const [editing,    setEditing]   = useState(null);   // null | "new" | entry-id
+  const [search,     setSearch]    = useState("");
+  const [filterTag,  setFilterTag] = useState("");
+  const [albumMode,  setAlbumMode] = useState(false);
+  const [lightboxSrc,setLightboxSrc]=useState(null);
+  const importRef = useRef();
 
-  const persist=(updated)=>{ setEntries(updated); saveJournal(updated); };
+  const persist = updated => { setEntries(updated); saveJournal(updated); };
 
-  const saveEntry=(data)=>{
-    if (editing==='new') {
-      const entry={ id:Date.now(), ...data };
-      persist([entry, ...entries]);
+  const saveEntry = data => {
+    if (editing === "new") {
+      persist([{ id: Date.now(), ...data }, ...entries]);
     } else {
-      persist(entries.map(e=>e.id===editing?{...e,...data}:e));
+      persist(entries.map(e => e.id === editing ? { ...e, ...data } : e));
     }
     setEditing(null);
   };
 
-  const deleteEntry=(id)=>{
-    if (window.confirm(zh?'確定刪除此日記？':'Delete this entry?')) {
-      persist(entries.filter(e=>e.id!==id));
-    }
+  const deleteEntry = id => {
+    if (window.confirm(zh ? "確定刪除此日記？" : "Delete this entry?"))
+      persist(entries.filter(e => e.id !== id));
   };
 
-  // Search + tag filter
-  const q=search.toLowerCase().trim();
-  const filtered=entries.filter(e=>{
-    if (filterTag && !(e.tags||[]).includes(filterTag)) return false;
+  // Import JSON
+  const handleImport = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const imported = Array.isArray(data) ? data : (data.entries || []);
+        if (!Array.isArray(imported)) throw new Error("bad format");
+        // Merge: avoid duplicates by id
+        const existingIds = new Set(entries.map(e => e.id));
+        const newOnes = imported.filter(e => !existingIds.has(e.id));
+        persist([...entries, ...newOnes].sort((a, b) => b.timestamp - a.timestamp));
+        alert(zh ? `已匯入 ${newOnes.length} 條日記` : `Imported ${newOnes.length} entries`);
+      } catch {
+        alert(zh ? "匯入失敗：格式錯誤" : "Import failed: invalid format");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const q = search.toLowerCase().trim();
+  const filtered = entries.filter(e => {
+    if (filterTag && !(e.tags || []).includes(filterTag)) return false;
     if (!q) return true;
-    return (e.title||'').toLowerCase().includes(q)||(e.text||'').toLowerCase().includes(q);
+    return (e.title || "").toLowerCase().includes(q) || (e.text || "").toLowerCase().includes(q);
   });
 
-  // All unique tags
-  const allTags=[...new Set(entries.flatMap(e=>e.tags||[]))].sort();
-
-  // All photos
-  const allPhotos=entries.flatMap(e=>(e.photos||[]).map(src=>({src,id:e.id,ts:e.timestamp})));
-
-  const [lightboxSrc, setLightboxSrc]=useState(null);
+  const allTags = [...new Set(entries.flatMap(e => e.tags || []))].sort();
+  const allPhotos = entries.flatMap(e => (e.photos || []).map(src => ({ src, id: e.id })));
 
   return (
-    <div style={{padding:16,paddingBottom:80,background:'var(--bg)',minHeight:'100vh'}}>
+    <div style={{ padding: 16, paddingBottom: 80, background: "var(--bg)", minHeight: "100vh" }}>
 
-      {/* ── Header ── */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-        <h2 style={{fontSize:18,fontWeight:600,color:'var(--text-primary)'}}>
-          {zh?'📖 日記':'📖 Journal'}
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)" }}>
+          {zh ? "📖 日誌" : "📖 Journal"}
         </h2>
-        <div style={{display:'flex',gap:8}}>
-          <button onPointerUp={()=>setAlbumMode(v=>!v)}
-            style={{padding:'7px 12px',borderRadius:'var(--radius-pill)',border:'1px solid var(--border)',
-              background:albumMode?'var(--accent)':'var(--bg)',color:albumMode?'var(--bg)':'var(--text-secondary)',
-              fontSize:12,fontWeight:600,cursor:'pointer',touchAction:'manipulation'}}>
-            {albumMode?(zh?'列表':'List'):(zh?'相冊':'Album')}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button onPointerUp={() => setAlbumMode(v => !v)}
+            style={{ padding: "7px 11px", borderRadius: "var(--radius-pill)", border: "1px solid var(--border)", background: albumMode ? "var(--accent)" : "var(--bg)", color: albumMode ? "var(--bg)" : "var(--text-secondary)", fontSize: 11, fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+            {albumMode ? (zh ? "列表" : "List") : (zh ? "相冊" : "Album")}
           </button>
-          <button onPointerUp={()=>setEditing('new')}
-            style={{padding:'7px 14px',borderRadius:'var(--radius-pill)',background:'var(--accent)',
-              color:'var(--bg)',border:'none',fontSize:13,fontWeight:600,cursor:'pointer',touchAction:'manipulation'}}>
-            + {zh?'新增':'New'}
+          <button onPointerUp={() => exportJournal(entries)}
+            style={{ padding: "7px 11px", borderRadius: "var(--radius-pill)", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+            {zh ? "匯出" : "Export"}
+          </button>
+          <button onPointerUp={() => importRef.current?.click()}
+            style={{ padding: "7px 11px", borderRadius: "var(--radius-pill)", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+            {zh ? "匯入" : "Import"}
+          </button>
+          <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleImport} />
+          <button onPointerUp={() => setEditing("new")}
+            style={{ padding: "7px 14px", borderRadius: "var(--radius-pill)", background: "var(--accent)", color: "var(--bg)", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}>
+            + {zh ? "新增" : "New"}
           </button>
         </div>
       </div>
 
-      {/* ── Editor ── */}
-      {editing!==null && (
-        <div style={{marginBottom:16}}>
-          <EntryEditor
-            lang={lang}
-            initial={editing==='new'?null:entries.find(e=>e.id===editing)}
-            onSave={saveEntry}
-            onCancel={()=>setEditing(null)}/>
+      {/* Editor */}
+      {editing !== null && (
+        <div style={{ marginBottom: 16 }}>
+          <EntryEditor lang={lang}
+            initial={editing === "new" ? null : entries.find(e => e.id === editing)}
+            onSave={saveEntry} onCancel={() => setEditing(null)} />
         </div>
       )}
 
-      {/* ── Search + Tag filter ── */}
+      {/* Search + tag filter */}
       {!editing && (
         <>
-          <input type="text" className="field-input" style={{marginBottom:10}}
-            placeholder={zh?'搜尋日記…':'Search entries…'}
-            value={search} onChange={e=>setSearch(e.target.value)}/>
-          {allTags.length>0 && (
-            <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:12}}>
-              <button onPointerUp={()=>setFilterTag('')}
-                style={{padding:'3px 10px',borderRadius:'var(--radius-pill)',border:'1px solid var(--border)',
-                  background:filterTag===''?'var(--accent)':'var(--bg)',color:filterTag===''?'var(--bg)':'var(--text-secondary)',
-                  fontSize:11,cursor:'pointer'}}>
-                {zh?'全部':'All'}
+          <input type="text" className="field-input" style={{ marginBottom: 10 }}
+            placeholder={zh ? "搜尋日誌…" : "Search entries…"}
+            value={search} onChange={e => setSearch(e.target.value)} />
+          {allTags.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
+              <button onPointerUp={() => setFilterTag("")}
+                style={{ padding: "3px 10px", borderRadius: "var(--radius-pill)", border: "1px solid var(--border)", background: filterTag === "" ? "var(--accent)" : "var(--bg)", color: filterTag === "" ? "var(--bg)" : "var(--text-secondary)", fontSize: 11, cursor: "pointer" }}>
+                {zh ? "全部" : "All"}
               </button>
-              {allTags.map(tag=>(
-                <button key={tag} onPointerUp={()=>setFilterTag(prev=>prev===tag?'':tag)}
-                  style={{padding:'3px 10px',borderRadius:'var(--radius-pill)',border:'1px solid var(--border)',
-                    background:filterTag===tag?'var(--accent)':'var(--bg)',color:filterTag===tag?'var(--bg)':'var(--text-secondary)',
-                    fontSize:11,cursor:'pointer'}}>
+              {allTags.map(tag => (
+                <button key={tag} onPointerUp={() => setFilterTag(prev => prev === tag ? "" : tag)}
+                  style={{ padding: "3px 10px", borderRadius: "var(--radius-pill)", border: "1px solid var(--border)", background: filterTag === tag ? "var(--accent)" : "var(--bg)", color: filterTag === tag ? "var(--bg)" : "var(--text-secondary)", fontSize: 11, cursor: "pointer" }}>
                   #{tag}
                 </button>
               ))}
@@ -341,46 +358,46 @@ export default function Journal({ lang }) {
         </>
       )}
 
-      {/* ── Album view ── */}
+      {/* Album view */}
       {albumMode && !editing && (
-        <div style={{columns:'3 80px',gap:6,columnFill:'balance'}}>
-          {allPhotos.map((p,i)=>(
-            <div key={i} style={{breakInside:'avoid',marginBottom:6}}>
-              <img src={p.src} alt="" onPointerUp={()=>setLightboxSrc(p.src)}
-                style={{width:'100%',borderRadius:6,display:'block',cursor:'pointer',border:'1px solid var(--border)'}}/>
+        <div style={{ columns: "3 80px", gap: 6, columnFill: "balance" }}>
+          {allPhotos.length === 0 && (
+            <p style={{ color: "var(--text-tertiary)", fontSize: 13, padding: "24px 0", textAlign: "center" }}>
+              {zh ? "尚無相片" : "No photos yet"}
+            </p>
+          )}
+          {allPhotos.map((p, i) => (
+            <div key={i} style={{ breakInside: "avoid", marginBottom: 6 }}>
+              <img src={p.src} alt="" onPointerUp={() => setLightboxSrc(p.src)}
+                style={{ width: "100%", borderRadius: 6, display: "block", cursor: "pointer", border: "1px solid var(--border)" }} />
             </div>
           ))}
-          {allPhotos.length===0 && (
-            <p style={{color:'var(--text-tertiary)',fontSize:13,padding:'24px 0',textAlign:'center'}}>
-              {zh?'尚無相片':'No photos yet'}
-            </p>
-          )}
         </div>
       )}
 
-      {/* ── List view ── */}
+      {/* List view */}
       {!albumMode && !editing && (
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {filtered.length===0 && (
-            <p style={{color:'var(--text-tertiary)',fontSize:13,padding:'24px 0',textAlign:'center'}}>
-              {entries.length===0
-                ? (zh?'還沒有日記，點擊「新增」開始記錄！':'No entries yet — tap New to start!')
-                : (zh?'找不到符合的記錄':'No matching entries')}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {filtered.length === 0 && (
+            <p style={{ color: "var(--text-tertiary)", fontSize: 13, padding: "24px 0", textAlign: "center" }}>
+              {entries.length === 0
+                ? (zh ? "還沒有日誌，點擊「新增」開始！" : "No entries yet — tap New to start!")
+                : (zh ? "找不到符合的記錄" : "No matching entries")}
             </p>
           )}
-          {filtered.map(e=>(
+          {filtered.map(e => (
             <JournalCard key={e.id} entry={e} lang={lang}
-              onDelete={()=>deleteEntry(e.id)}
-              onEdit={()=>setEditing(e.id)}/>
+              onDelete={() => deleteEntry(e.id)}
+              onEdit={() => setEditing(e.id)} />
           ))}
         </div>
       )}
 
-      {/* ── Lightbox ── */}
+      {/* Global lightbox for album view */}
       {lightboxSrc && (
-        <div onPointerUp={()=>setLightboxSrc(null)}
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <img src={lightboxSrc} alt="" style={{maxWidth:'90vw',maxHeight:'88vh',borderRadius:8,objectFit:'contain'}}/>
+        <div onPointerUp={() => setLightboxSrc(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth: "90vw", maxHeight: "88vh", borderRadius: 8, objectFit: "contain" }} />
         </div>
       )}
     </div>

@@ -588,3 +588,51 @@ html[data-theme="dark"] .bf-order-btn--on { background: #4c0519; border-color: #
   cursor:pointer; touch-action:manipulation; transition:border-color .15s, background .15s;
 }
 .photo-drop-zone:hover { border-color:var(--accent); background:var(--bg); }
+
+/* ── Journal ───────────────────────────────────────── */
+.journal-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; animation: fadeUp .25s ease;
+}
+.journal-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px;
+}
+.journal-date { font-size: 12px; font-weight: 600; color: var(--text-primary); display: block; }
+.journal-time { font-size: 11px; color: var(--text-tertiary); }
+.journal-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.journal-text {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.65; white-space: pre-wrap;
+}
+.journal-action-btn {
+  font-size: 14px; padding: 4px 7px; border-radius: 6px; border: none;
+  background: none; cursor: pointer; touch-action: manipulation; transition: background .12s;
+}
+.journal-action-btn:hover { background: var(--bg); }
+.journal-action-btn--del:hover { background: var(--red-bg); }
+
+.journal-editor {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; animation: fadeUp .25s ease;
+}
+.journal-editor-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+
+.photo-drop-zone {
+  border: 1.5px dashed var(--border-strong); border-radius: var(--radius-sm);
+  padding: 18px; text-align: center; font-size: 13px; color: var(--text-tertiary);
+  cursor: pointer; touch-action: manipulation; transition: border-color .15s, background .15s;
+}
+.photo-drop-zone:hover { border-color: var(--accent); background: var(--bg); }
+
+/* ── Sleep hint (BabyLog) ──────────────────────────── */
+.sleep-hint {
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px;
+}
+.sleep-hint--warn {
+  background: var(--yellow-bg); border: 1px solid var(--yellow-border); color: var(--yellow-text);
+}
+.sleep-hint--ok {
+  background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green-text);
+}
